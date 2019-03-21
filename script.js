@@ -2,6 +2,9 @@
 
 const GBP = {DATA: {}, MODEL: {}, VIEW: {}};
 
+// 曲の長さ
+GBP.DATA.musicTime = 101;
+
 // アイテムの全探索は困難なためヒューリスティックなパターンから選択する
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
 GBP.MODEL.generateItemsPatterns = function(items){
@@ -67,7 +70,6 @@ GBP.MODEL.generateItemsPatterns = function(items){
 
 // アイテムとイベント情報からメンバーのパラメータボーナスを計算する
 GBP.MODEL.calcBonus = function(member, items, eventBonus){
-    const paraSum = member.parameters.reduce((acc, p) => acc + p, 0);
     member.itemBonus = items.reduce((bonus, item) => {
         // 条件を満たさなければ終了
         // アイテムのnullの項目は無条件にボーナスが適用される
@@ -78,7 +80,7 @@ GBP.MODEL.calcBonus = function(member, items, eventBonus){
         if(item.type !== null && item.type != member.type)
             return bonus;
 
-        return bonus + paraSum*item.paraUpRate;
+        return bonus + member.paraSum*item.paraUpRate;
     }, 0);
     
     // イベントボーナスの倍率は固定値
@@ -86,74 +88,102 @@ GBP.MODEL.calcBonus = function(member, items, eventBonus){
     let applyCount = 0;
     if(eventBonus.members !== null &&
         eventBonus.members.indexOf(member.character) >= 0){
-        member.eventBonus += paraSum*0.2;
+        member.eventBonus += member.paraSum*0.2;
         ++applyCount;
     }
     if(eventBonus.type !== null && eventBonus.type == member.type){
-        member.eventBonus += paraSum*0.1;
+        member.eventBonus += member.paraSum*0.1;
         ++applyCount;
     }
     if(eventBonus.parameter !== null && applyCount >= 2)
         member.eventBonus += member.parameters[eventBonus.parameter]*0.5;
 
+    member.paraInclBonus = member.paraSum + member.itemBonus + member.eventBonus;
     return member;
 };
 
-// アイテムを固定してメンバーを最適化する
-// charactersの各要素はスキル時間*スキル倍率で降順ソート済み
-// itemsは所持アイテムではなく固定された使用アイテム
-GBP.MODEL.optimizeMembers = function(characters, items, eventBonus){
-    // メンバーにボーナス値を追加する
-    characters = characters.map(members => members.map(
-        member => GBP.MODEL.calcBonus(member, items, eventBonus)));
-
-    // 同キャラで総合力もスキルも劣っているメンバーを除外する
-    characters = characters.map(members => {
-        let maxParaSum = -1;
-        return members.filter(member => {
-            const paraSum = member.parameters.reduce((acc, p) => acc + p, 0) +
-                member.itemBonus + member.eventBonus;
-            if(paraSum > maxParaSum){
-                maxParaSum = paraSum;
-                return true;
-            }else
-                return false;
-        });
-    });
-
-    console.log(characters);
-    console.log(items);
-    console.log(eventBonus);
-
-    let stack = [{comb: [], charaPt: 0, memberPt: 0}];
-    let startTime = Date.now();
-    while(stack.length > 0){
-        if(Date.now() - startTime >= 2000){
-            window.alert("計算時間オーバー");
-            break;
-        }
-        const data = stack.pop();
-        // 5人揃ったときの処理
-        if(data.comb.length == 5){
-            try{
-                console.log(data.comb.map(member => member.id).join(", "));
-            }catch{
-                console.log(data.comb);
+// Arrayに対するcombination（Rubyのやつと同じ）
+GBP.MODEL.combination = function(array, n, callback){
+    let func = arg => callback(arg.map(x => array[x]));
+    for(let i = 0; i < n; i++){
+        const tmp = func;
+        func = arg => {
+            for(let j = (i == n - 1 ? 0 :
+                arg[n - i - 2] + 1); j < array.length; ++j){
+                tmp(arg.concat(j));
             }
-            continue;
-        }
-        // TODO: 同キャラ被りあり
-        for(let charaIdx = data.charaPt; charaIdx < 25; ++charaIdx){
-            for(let memberIdx = (charaIdx == data.charaPt ? data.memberPt : 0);
-                memberIdx < characters[charaIdx].length; ++memberIdx){
-                stack.push({
-                    comb: data.comb.concat(characters[charaIdx][memberIdx]),
-                    charaPt: charaIdx,
-                    memberPt: memberIdx + 1
-                });
-            }
+        };
+    }
+    func([]);
+}
+
+// ボーナス計算済みのメンバー5人の総合力を計算する
+// partyArrはスキルの強さでソート済み
+GBP.MODEL.calcTotalPara = function(partyArr){
+    // 同キャラがいる場合は無効
+    for(let i = 0; i < 4; ++i){
+        for(let j = i + 1; j < 5; ++j){
+            if(partyArr[i].character == partyArr[j].character)
+                return null;
         }
     }
+
+    let result =  partyArr.reduce((result, member) => ({
+        base: result.base + member.paraSum,
+        itemBonus: result.itemBonus + member.itemBonus,
+        eventBonus: result.eventBonus + member.eventBonus,
+        paraInclBonus: result.paraInclBonus + member.paraInclBonus,
+        skill: result.skill + member.mulScoreUp,
+    }), {
+        base: 0,
+        itemBonus: 0,
+        eventBonus: 0,
+        paraInclBonus: 0,
+        skill: partyArr[0].mulScoreUp
+    });
+
+    result.skill *= result.paraInclBonus/GBP.DATA.musicTime;
+    result.total = result.paraInclBonus + result.skill;
+
+    return result
+};
+
+// アイテムを固定してメンバーを最適化する
+// membersはスキル時間*スキル倍率で降順ソート済み
+// itemsは所持アイテムではなく固定された使用アイテム
+GBP.MODEL.optimizeMembers = function(members, items, eventBonus){
+    // メンバーにボーナス値を追加する
+    members = members.map(
+        member => GBP.MODEL.calcBonus(member, items, eventBonus));
+
+    // 上位互換の同キャラが1枚もしくは5キャラがいるメンバーを除外
+    members = members.filter((targetMember, targetIdx) => {
+        let charaMask = [];
+        for(let i = 0; i < 25; i++)
+            charaMask.push(false);
+
+        for(let superiorIdx = 0; superiorIdx < targetIdx; ++superiorIdx){
+            if(members[superiorIdx].paraInclBonus >=
+                targetMember.paraInclBonus)
+
+                charaMask[members[superiorIdx].character] = true;
+        }
+        return (!charaMask[targetMember.character] &&
+            charaMask.reduce((n, b) => n + (b ? 1 : 0), 0) < 5)
+    });
+
+    let maxResult = {total: 0};
+    let maxPartyArr = null;
+    GBP.MODEL.combination(members, 5, partyArr => {
+        const result = GBP.MODEL.calcTotalPara(partyArr);
+        if(result !== null){
+            if(result.total > maxResult.total){
+                maxResult = result;
+                maxPartyArr = partyArr;
+            }
+        }
+    });
+    return {parameters: maxResult, partyArr: maxPartyArr}
 };
 
 // メンバーとアイテムを最適化する
@@ -162,24 +192,19 @@ GBP.MODEL.optimizeMembersAndItems =
     function(membersLevels, itemsLevels, eventBonus){
 
     // 所持メンバーリスト
-    let characters = [];
-    for(let i = 0; i < 25; i++)
-        characters.push([]);
-    GBP.DATA.members.filter(
-        (m, i) => membersLevels[i] !== null).forEach(member => {
+    let members = GBP.DATA.members.filter(
+        (m, i) => membersLevels[i] !== null).map(member => ({
 
-        characters[member.character].push({
-            id: member.id,
-            character: member.character,
-            type: member.type,
-            parameters: member.parameters,
-            scoreUpRate: member.scoreUpRate,
-            scoreUpTime: member.scoreUpTimeArr[membersLevels[member.id]]
-        });
-    });
-    const mulScoreUp = member => member.scoreUpRate*member.scoreUpTime;
-    characters = characters.map(
-        members => members.sort((a, b) => mulScoreUp(b) - mulScoreUp(a)));
+        id: member.id,
+        character: member.character,
+        type: member.type,
+        parameters: member.parameters,
+        paraSum: member.parameters.reduce((acc, p) => acc + p, 0),
+        scoreUpRate: member.scoreUpRate,
+        scoreUpTime: member.scoreUpTimeArr[membersLevels[member.id]],
+        mulScoreUp: member.scoreUpRate*
+            member.scoreUpTimeArr[membersLevels[member.id]]
+    })).sort((a, b) => b.mulScoreUp - a.mulScoreUp);
 
     // 所持アイテムリスト
     let items = GBP.DATA.items.filter(
@@ -196,17 +221,25 @@ GBP.MODEL.optimizeMembersAndItems =
 
     const itemsPatterns = GBP.MODEL.generateItemsPatterns(items);
 
-    const v1 = GBP.MODEL.optimizeMembers(characters, itemsPatterns[0], eventBonus);
-    console.log(v1);
-
-    /*
-    console.log(items.map(item => `${
-        GBP.DATA.items[item.id].name}(${itemsLevels[item.id]})`).join("\n"));
-
-    const patterns = GBP.MODEL.generateItemsPatterns(items);
-    console.log(patterns.map(pattern => pattern.map(
-        item => GBP.DATA.items[item.id].name).join(", ")).join("\n"));
-    */
+    let maxResult = null;
+    const st = Date.now();
+    itemsPatterns.forEach((ip => {
+        const result = GBP.MODEL.optimizeMembers(members, ip, eventBonus);
+        if(maxResult === null ||
+            result.parameters.total > maxResult.parameters.total){
+            result.items = ip;
+            maxResult = result;
+        }
+    }));
+    console.log(`calculation time = ${Date.now() - st}ms`);
+    console.log("Parameters:");
+    console.log(maxResult.parameters);
+    console.log("Party:");
+    console.log(maxResult.partyArr.map(m => GBP.DATA.members[m.id]));
+    console.log("Items:");
+    console.log(maxResult.items.map(i => GBP.DATA.items[i.id]));
+    console.log("Event:");
+    console.log(eventBonus);
 }
 
 // members.jsonとitems.jsonを読み込む
