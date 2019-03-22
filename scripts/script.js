@@ -5,6 +5,20 @@ const GBP = {DATA: {}, MODEL: {}, VIEW: {}};
 // 曲の長さ
 GBP.DATA.musicTime = 101;
 
+GBP.DATA.characterNames = [
+    "戸山香澄", "花園たえ", "牛込りみ", "山吹沙綾", "市ヶ谷有咲",
+    "美竹蘭", "青葉モカ", "上原ひまり", "宇田川巴", "羽沢つぐみ",
+    "丸山彩", "氷川日菜", "白鷺千聖", "大和麻弥", "若宮イヴ",
+    "湊友希那", "氷川紗夜", "今井リサ", "宇田川あこ", "白金燐子",
+    "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲",
+
+];
+GBP.DATA.typeColors = ["#ff345a", "#4057e3", "#44c527", "#ff8400"];
+GBP.DATA.typeNames = ["パワフル", "クール", "ピュア", "ハッピー"];
+GBP.DATA.bandNames =
+    ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ"];
+GBP.DATA.scoreUpBase = [0.1, 0.3, 0.6, 1];
+
 // アイテムの全探索は困難なためヒューリスティックなパターンから選択する
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
 GBP.MODEL.generateItemsPatterns = function(items){
@@ -244,16 +258,25 @@ GBP.MODEL.optimizeMembersAndItems =
 
 // members.jsonとitems.jsonを読み込む
 GBP.MODEL.readData = function(){
+    // ロードするデータの数
+    let loadNum = 2;
+
     const xhrMembers = new XMLHttpRequest();
-    xhrMembers.addEventListener("load",
-        () => GBP.DATA.members = JSON.parse(xhrMembers.responseText));
-    xhrMembers.open("GET", "./members.json");
+    xhrMembers.addEventListener("load", () => {
+        GBP.DATA.members = JSON.parse(xhrMembers.responseText);
+        if(--loadNum <= 0)
+            GBP.VIEW.render();
+    });
+    xhrMembers.open("GET", "./data/members.json");
     xhrMembers.send();
 
     const xhrItems = new XMLHttpRequest();
-    xhrItems.addEventListener("load",
-        () => GBP.DATA.items = JSON.parse(xhrItems.responseText));
-    xhrItems.open("GET", "./items.json");
+    xhrItems.addEventListener("load", () => {
+        GBP.DATA.items = JSON.parse(xhrItems.responseText);
+        if(--loadNum <= 0)
+            GBP.VIEW.render();
+    });
+    xhrItems.open("GET", "./data/items.json");
     xhrItems.send();
 }
 
@@ -283,7 +306,150 @@ eventBonus.members = [];
     }
 }
 
+GBP.VIEW.render = function(){
+    Vue.component("member-item", {
+        props: ["member", "visarrs"],
+        data : () => {
+            return {
+                skillLevel: 5,
+                available: true,
+                lightTypeColors: ["#ffccd5", "#cfd5f8", "#d0f0c9", "#ffe0bf"],
+            };
+        },
+        template: `
+            <li
+                v-if="calcVisibility(member, visarrs)"
+                v-on:click="available = !available"
+                v-bind:style="calcColor(member.type)"
+            >
+                <div>{{member.name}}</div>
+                <div>
+                    {{rarityToStr(member.rarity)}}
+                    {{charaToStr(member.character)}}
+                </div>
+                <div>
+                    総合力: {{member.parameters.reduce((s, m) => s + m, 0)}}
+                    <small>({{member.parameters.join("-")}})</small>
+                </div>
+                <div>
+                    スキルLv.
+                    <input
+                        type="number" min="1" max="5"
+                        v-model="skillLevel"
+                        v-on:click="e => e.stopPropagation()"
+                    >
+                </div>
+                <div>
+                    {{member.scoreUpTimeArr[skillLevel - 1].toFixed(1)}}秒間、
+                    スコアが{{Math.round(member.scoreUpRate*100)}}%UPする
+                </div>
+            </li>
+        `.replace(/    /g, ""),
+        methods: {
+            calcColor: function(type){
+                return {
+                    backgroundColor: this.lightTypeColors[type],
+                    borderStyle: "solid",
+                    borderColor: (this.available ? GBP.DATA.typeColors[type] :
+                        this.lightTypeColors[type]),
+                    borderWidth: "4px",
+                };
+            },
+            calcVisibility: function(member, visArrs){
+                let scoreUpKind = 1;
+                let diff =
+                    member.scoreUpRate - GBP.DATA.scoreUpBase[member.rarity];
+
+                if(diff > 0)
+                    scoreUpKind = 0;
+                else if(diff < 0)
+                    scoreUpKind = 2;
+
+                return (visArrs.type[member.type] &&
+                    visArrs.band[Math.floor(member.character/5)] &&
+                    visArrs.scoreUp[scoreUpKind]);
+            },
+            charaToStr: function(chara){
+                return GBP.DATA.characterNames[chara];
+            },
+            rarityToStr: function(rarity){
+                const star = "★";
+                let str = star;
+                for(let i = 0; i < rarity; ++i){
+                    str += star;
+                }
+                return str;
+            },
+        }
+    });
+
+    Vue.component("label-item",{
+        props: ["name", "idx", "kind"],
+        data: function(){
+            return {
+                value: true
+            };
+        },
+        template: `
+            <label>
+                <input
+                    type="checkbox"
+                    v-model="value"
+                    v-on:click="onclick(idx, kind)"
+                >
+                <span>{{name}}</span>
+            </label>
+        `.replace(/    /g, ""),
+        methods: {
+            onclick: function(idx, kind){
+                this.$emit("checkbox-changed", {
+                    idx: idx,
+                    kind: kind,
+                    value: !this.value,
+                });
+            }
+        }
+    });
+
+    GBP.DATA.app = new Vue({
+        el: "#app",
+        data: {
+            appTitle: "編成最適化ツール",
+            memberHeading: "所持メンバー",
+            members: GBP.DATA.members,
+            typeVisArr: [true, true, true, true],
+            bandVisArr: [true, true, true, true, true],
+            scoreUpVisArr: [true, true, true],
+        },
+        methods: {
+            // v-forのinは1オリジンなのでhogeNames[hoge-1]
+            typeToName: function(type){
+                return GBP.DATA.typeNames[type - 1];
+            },
+            bandToName: function(band){
+                return GBP.DATA.bandNames[band - 1];
+            },
+            scoreUpToExplain: function(scoreUp){
+                return ["条件付きスコアアップ",
+                    "スコアアップ", "その他"][scoreUp - 1];
+            },
+            checkboxChanged: function(e){
+                let target;
+                if(e.kind == "type")
+                    target = this.typeVisArr;
+                else if(e.kind == "band")
+                    target = this.bandVisArr;
+                else if(e.kind == "scoreUp")
+                    target = this.scoreUpVisArr;
+                Vue.set(target, e.idx - 1, e.value);
+            }
+        }
+    });
+}
+
 window.onload = function(){
+    GBP.MODEL.readData();
+    /*
     eventBonus.type = Math.floor(Math.random()*4);
     eventBonus.parameter = Math.floor(Math.random()*3);
 
@@ -292,4 +458,5 @@ window.onload = function(){
     document.getElementById("test-button").onclick =
         GBP.MODEL.optimizeMembersAndItems.bind(
         GBP.MODEL, membersLevels, itemsLevels, eventBonus);
+    */
 };
