@@ -6,46 +6,45 @@
 <script src="./scripts/script.js"></script>
 
 <div id="app">
-    <h1>{{appTitle}}</h1>
-    <h2>{{memberHeading}}</h2>
-    <div>
-        <label-item
-            v-for="idx in 4"
-            v-bind:name="typeToName(idx)"
-            v-bind:idx="idx"
-            v-bind:kind="'type'"
-            v-bind:key="idx"
-            v-on:checkbox-changed="checkboxChanged($event)"
-        ></label-item>
-    </div>
-    <div>
-        <label-item
-            v-for="idx in 5"
-            v-bind:name="bandToName(idx)"
-            v-bind:idx="idx"
-            v-bind:kind="'band'"
-            v-bind:key="idx"
-            v-on:checkbox-changed="checkboxChanged($event)"
-        ></label-item>
-    </div>
-    <div>
-        <label-item
-            v-for="idx in 3"
-            v-bind:name="scoreUpToExplain(idx)"
-            v-bind:idx="idx"
-            v-bind:kind="'scoreUp'"
-            v-bind:key="idx"
-            v-on:checkbox-changed="checkboxChanged($event)"
-        ></label-item>
-    </div>
-    <ul>
-        <member-item
-            v-for="m in members"
-            v-bind:member="m"
-            v-bind:visarrs=
-                "{type: typeVisArr, band: bandVisArr, scoreUp: scoreUpVisArr}"
-            v-bind:key="m.id"
-        ></member-item>
-    </ul>
+  <h1>{{appTitle}}</h1>
+  <h2>{{memberHeading}}</h2>
+  <div>
+    <label-item
+      v-for="idx in 4"
+      v-bind:name="typeToName(idx)"
+      v-bind:idx="idx"
+      v-bind:kind="'type'"
+      v-bind:key="idx"
+      v-on:checkbox-changed="checkboxChanged($event)"
+    ></label-item>
+  </div>
+  <div>
+    <label-item
+      v-for="idx in 5"
+      v-bind:name="bandToName(idx)"
+      v-bind:idx="idx"
+      v-bind:kind="'band'"
+      v-bind:key="idx"
+      v-on:checkbox-changed="checkboxChanged($event)"
+    ></label-item>
+  </div>
+  <div>
+    <label-item
+      v-for="idx in 3"
+      v-bind:name="scoreUpToExplain(idx)"
+      v-bind:idx="idx"
+      v-bind:kind="'scoreUp'"
+      v-bind:key="idx"
+      v-on:checkbox-changed="checkboxChanged($event)"
+    ></label-item>
+  </div>
+  <ul>
+    <li
+      is="member-item"
+      v-for="m in visibleMembers"
+      v-bind:member="m"
+      v-bind:key="m.id"
+    ></li>
+  </ul>
 </div>
 <!--<input id="test-button" type="button" value="BUTTON">-->
