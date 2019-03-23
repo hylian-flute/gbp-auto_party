@@ -11,7 +11,7 @@
   <div>
     <label-item
       v-for="idx in 4"
-      v-bind:name="typeToName(idx)"
+      v-bind:name="typeNames[idx - 1]"
       v-bind:idx="idx"
       v-bind:kind="'type'"
       v-bind:key="idx"
@@ -21,7 +21,7 @@
   <div>
     <label-item
       v-for="idx in 5"
-      v-bind:name="bandToName(idx)"
+      v-bind:name="bandNames[idx - 1]"
       v-bind:idx="idx"
       v-bind:kind="'band'"
       v-bind:key="idx"
@@ -31,7 +31,7 @@
   <div>
     <label-item
       v-for="idx in 3"
-      v-bind:name="scoreUpToExplain(idx)"
+      v-bind:name="skillExplains[idx - 1]"
       v-bind:idx="idx"
       v-bind:kind="'scoreUp'"
       v-bind:key="idx"

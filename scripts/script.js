@@ -262,6 +262,7 @@ GBP.MODEL.readData = function(){
   const xhrMembers = new XMLHttpRequest();
   xhrMembers.addEventListener("load", () => {
     GBP.DATA.members = JSON.parse(xhrMembers.responseText);
+    GBP.DATA.membersLevels = GBP.DATA.members.map(m => 4);
     if(--loadNum <= 0)
       GBP.VIEW.render();
   });
@@ -278,51 +279,29 @@ GBP.MODEL.readData = function(){
   xhrItems.send();
 }
 
-let membersLevels = [];
-for(let i = 0; i < 503; ++i){
-  let r = Math.floor(Math.random()*6);
-  membersLevels.push(r < 5 ? r : null);
-}
-let itemsLevels = [];
-for(let i = 0; i < 46; ++i){
-  let r = Math.floor(Math.random()*6);
-  itemsLevels.push(r < 5 ? r : null);
-}
-let eventBonus = {};
-eventBonus.members = [];
-{
-  let selectedMembers = [];
-  for(let i = 0; i < 25; ++i)
-    selectedMembers.push(false);
-  for(let i = 0; i < 5; ++i){
-    let r = Math.floor(Math.random()*25);
-    while(selectedMembers[r]){
-      r = (r + 1)%25
-    }
-    eventBonus.members.push(r);
-    selectedMembers[r] = true;
-  }
-}
-
 GBP.VIEW.render = function(){
   Vue.component("member-item", {
     props: ["member"],
-    data : () => {
+    data : function(){
       return {
-        skillLevel: 5,
-        available: true,
+        skillLevel: (() => {
+          if(GBP.DATA.membersLevels[this.member.id] !== null)
+            return GBP.DATA.membersLevels[this.member.id] + 1
+          else
+            return 5
+        })(),
+        available: GBP.DATA.membersLevels[this.member.id] !== null,
         lightTypeColors: ["#ffccd5", "#cfd5f8", "#d0f0c9", "#ffe0bf"],
       };
     },
     template: `
       <li
-        v-on:click="available = !available"
-        v-bind:style="calcColor(member.type)"
+        v-on:click="clicked"
+        v-bind:style="calcColor"
       >
         <div>{{member.name}}</div>
         <div>
-          {{rarityToStr(member.rarity)}}
-          {{charaToStr(member.character)}}
+          {{rarityToStr}} {{charaToStr}}
         </div>
         <div>
           総合力: {{member.parameters.reduce((s, m) => s + m, 0)}}
@@ -333,7 +312,9 @@ GBP.VIEW.render = function(){
           <input
             type="number" min="1" max="5"
             v-model="skillLevel"
+            v-bind:disabled="!available"
             v-on:click="e => e.stopPropagation()"
+            v-on:change="skillLevelChanged"
           >
         </div>
         <div>
@@ -343,22 +324,34 @@ GBP.VIEW.render = function(){
       </li>
     `.replace(/  /g, ""),
     methods: {
-      calcColor: function(type){
+      clicked: function(){
+        this.available = !this.available;
+        GBP.DATA.membersLevels[this.member.id] =
+          this.available ? this.skillLevel - 1 : null;
+      },
+      skillLevelChanged: function(){
+        if(this.available)
+          GBP.DATA.membersLevels[this.member.id] = this.skillLevel - 1;
+      },
+    },
+    computed: {
+      calcColor: function(){
         return {
-          backgroundColor: this.lightTypeColors[type],
+          backgroundColor: this.lightTypeColors[this.member.type],
           borderStyle: "solid",
-          borderColor: (this.available ? GBP.DATA.typeColors[type] :
-            this.lightTypeColors[type]),
+          borderColor:
+            (this.available ? GBP.DATA.typeColors[this.member.type] :
+            this.lightTypeColors[this.member.type]),
           borderWidth: "4px",
         };
       },
-      charaToStr: function(chara){
-        return GBP.DATA.characterNames[chara];
+      charaToStr: function(){
+        return GBP.DATA.characterNames[this.member.character];
       },
-      rarityToStr: function(rarity){
+      rarityToStr: function(){
         const star = "★";
         let str = star;
-        for(let i = 0; i < rarity; ++i){
+        for(let i = 0; i < this.member.rarity; ++i){
           str += star;
         }
         return str;
@@ -378,17 +371,17 @@ GBP.VIEW.render = function(){
         <input
           type="checkbox"
           v-model="value"
-          v-on:click="onclick(idx, kind)"
+          v-on:change="onchange(idx, kind)"
         >
         <span>{{name}}</span>
       </label>
     `.replace(/  /g, ""),
     methods: {
-      onclick: function(idx, kind){
+      onchange: function(idx, kind){
         this.$emit("checkbox-changed", {
           idx: idx,
           kind: kind,
-          value: !this.value,
+          value: this.value,
         });
       }
     }
@@ -399,23 +392,15 @@ GBP.VIEW.render = function(){
     data: {
       appTitle: "編成最適化ツール",
       memberHeading: "所持メンバー",
-      members: GBP.DATA.members,
+      members: GBP.DATA.members.concat(),
       typeVisArr: [true, true, true, true],
       bandVisArr: [true, true, true, true, true],
       scoreUpVisArr: [true, true, true],
+      typeNames: GBP.DATA.typeNames,
+      bandNames: GBP.DATA.bandNames,
+      skillExplains: ["条件付きスコアアップ", "スコアアップ", "その他"]
     },
     methods: {
-      // v-forのinは1オリジンなのでhogeNames[hoge-1]
-      typeToName: function(type){
-        return GBP.DATA.typeNames[type - 1];
-      },
-      bandToName: function(band){
-        return GBP.DATA.bandNames[band - 1];
-      },
-      scoreUpToExplain: function(scoreUp){
-        return ["条件付きスコアアップ",
-          "スコアアップ", "その他"][scoreUp - 1];
-      },
       checkboxChanged: function(e){
         let target;
         if(e.kind == "type")
@@ -448,9 +433,35 @@ GBP.VIEW.render = function(){
 
           return true;
         });
-      }
+      },
     }
   });
+}
+
+let membersLevels = [];
+for(let i = 0; i < 503; ++i){
+  let r = Math.floor(Math.random()*6);
+  membersLevels.push(r < 5 ? r : null);
+}
+let itemsLevels = [];
+for(let i = 0; i < 46; ++i){
+  let r = Math.floor(Math.random()*6);
+  itemsLevels.push(r < 5 ? r : null);
+}
+let eventBonus = {};
+eventBonus.members = [];
+{
+  let selectedMembers = [];
+  for(let i = 0; i < 25; ++i)
+    selectedMembers.push(false);
+  for(let i = 0; i < 5; ++i){
+    let r = Math.floor(Math.random()*25);
+    while(selectedMembers[r]){
+      r = (r + 1)%25
+    }
+    eventBonus.members.push(r);
+    selectedMembers[r] = true;
+  }
 }
 
 window.onload = function(){
