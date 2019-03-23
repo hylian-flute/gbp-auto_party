@@ -359,11 +359,11 @@ GBP.VIEW.render = function(){
     }
   });
 
-  Vue.component("label-item",{
-    props: ["name", "idx", "kind"],
+  Vue.component("checkbox-label",{
+    props: ["visible", "name", "idx", "kind"],
     data: function(){
       return {
-        value: true
+        value: this.visible
       };
     },
     template: `
@@ -387,10 +387,35 @@ GBP.VIEW.render = function(){
     }
   });
 
+  Vue.component("radio-label", {
+    props: ["option", "init"],
+    template: `
+      <label>
+        <input
+          type="radio"
+          name="option.name"
+          v-bind:checked="init"
+          v-on:change="onchange($event)"
+        >
+        <span>{{option.text}}</span>
+      </label>
+    `.replace(/  /g, ""),
+    methods: {
+      onchange: function(){
+        this.$emit("radio-changed", {
+          name: this.option.name,
+          idx: this.option.idx,
+        });
+      }
+    }
+  });
+
   GBP.DATA.app = new Vue({
     el: "#app",
     data: {
       appTitle: "編成最適化ツール",
+      tabArr: ["メンバー一覧", "アイテム一覧"],
+      currentTab: 0,
       memberHeading: "所持メンバー",
       members: GBP.DATA.members.concat(),
       typeVisArr: [true, true, true, true],
@@ -398,9 +423,33 @@ GBP.VIEW.render = function(){
       scoreUpVisArr: [true, true, true],
       typeNames: GBP.DATA.typeNames,
       bandNames: GBP.DATA.bandNames,
-      skillExplains: ["条件付きスコアアップ", "スコアアップ", "その他"]
+      skillExplains: ["条件付きスコアアップ", "スコアアップ", "その他"],
+      sortOptions: (() => {
+        let arr = [];
+        const textArr = ["総合力", "レアリティ", "キャラクター"];
+        for(let i = 0; i < 3; i++){
+          arr.push({
+            name: "sortOption",
+            text: textArr[i],
+            idx: i
+          });
+        }
+
+        return arr;
+      })(),
+      membersOrder: {
+        value: 0,
+        sortOption: 2,
+        list: ["昇順", "降順"]
+      }
+    },
+    created: function(){
+      this.sortMembers();
     },
     methods: {
+      switchTab: function(idx){
+        this.currentTab = idx;
+      },
       checkboxChanged: function(e){
         let target;
         if(e.kind == "type")
@@ -409,8 +458,68 @@ GBP.VIEW.render = function(){
           target = this.bandVisArr;
         else if(e.kind == "scoreUp")
           target = this.scoreUpVisArr;
-        Vue.set(target, e.idx - 1, e.value);
-      }
+        Vue.set(target, e.idx, e.value);
+      },
+      radioChanged: function(e){
+        if(e.name == "sortOption"){
+          this.membersOrder.sortOption = e.idx;
+          this.sortMembers();
+        }
+      },
+      sortMembers: function(){
+        let callback;
+        if(this.membersOrder.sortOption == 0){
+          callback = (a, b) => {
+            let paraA, paraB;
+            [paraA, paraB] = [a, b].map(member =>
+              member.parameters.reduce((acc, p) => acc + p, 0));
+
+            if(paraA != paraB){
+              const diff = paraA - paraB;
+              return (this.membersOrder.value == 0 ? diff : -diff);
+            }else if(a.character != b.character)
+              return a.character - b.character;
+            else
+              return a.id - b.id;
+          };
+        }else if(this.membersOrder.sortOption == 1){
+          callback = (a, b) => {
+            if(a.rarity != b.rarity){
+              const diff = a.rarity - b.rarity;
+              return (this.membersOrder.value == 0 ? diff : -diff);
+            }else if(a.character != b.character)
+              return a.character - b.character;
+            else{
+              let paraA, paraB;
+              [paraA, paraB] = [a, b].map(member =>
+                member.parameters.reduce((acc, p) => acc + p, 0));
+              if(paraA != paraB)
+                return paraA - paraB;
+              else
+                return a.id - b.id;
+            }
+          };
+        }else{
+          callback = (a, b) => {
+            if(a.character != b.character){
+              const diff = a.character - b.character;
+              return (this.membersOrder.value == 0 ? diff : -diff);
+            }else{
+              let paraA, paraB;
+              [paraA, paraB] = [a, b].map(member =>
+                member.parameters.reduce((acc, p) => acc + p, 0));
+              if(paraA != paraB)
+                return paraB - paraA;
+              else
+                return a.id - b.id;
+            }
+          };
+        }
+        this.members.sort(callback);
+      },
+      orderChanged: function(){
+        this.sortMembers();
+      },
     },
     computed: {
       visibleMembers: function(){

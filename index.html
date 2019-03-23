@@ -7,44 +7,68 @@
 
 <div id="app">
   <h1>{{appTitle}}</h1>
-  <h2>{{memberHeading}}</h2>
-  <div>
-    <label-item
-      v-for="idx in 4"
-      v-bind:name="typeNames[idx - 1]"
-      v-bind:idx="idx"
-      v-bind:kind="'type'"
-      v-bind:key="idx"
-      v-on:checkbox-changed="checkboxChanged($event)"
-    ></label-item>
-  </div>
-  <div>
-    <label-item
-      v-for="idx in 5"
-      v-bind:name="bandNames[idx - 1]"
-      v-bind:idx="idx"
-      v-bind:kind="'band'"
-      v-bind:key="idx"
-      v-on:checkbox-changed="checkboxChanged($event)"
-    ></label-item>
-  </div>
-  <div>
-    <label-item
-      v-for="idx in 3"
-      v-bind:name="skillExplains[idx - 1]"
-      v-bind:idx="idx"
-      v-bind:kind="'scoreUp'"
-      v-bind:key="idx"
-      v-on:checkbox-changed="checkboxChanged($event)"
-    ></label-item>
-  </div>
   <ul>
-    <li
-      is="member-item"
-      v-for="m in visibleMembers"
-      v-bind:member="m"
-      v-bind:key="m.id"
-    ></li>
+    <li v-for="(text, idx) in tabArr" v-on:click="switchTab(idx)">
+      {{text}}
+    </li>
   </ul>
+  <div v-if="currentTab == 0">
+    <h2>{{memberHeading}}</h2>
+    <div>
+      <checkbox-label
+        v-for="(visible, idx) in typeVisArr"
+        v-bind:visible="visible"
+        v-bind:name="typeNames[idx]"
+        v-bind:idx="idx"
+        v-bind:kind="'type'"
+        v-bind:key="idx"
+        v-on:checkbox-changed="checkboxChanged($event)"
+      ></checkbox-label>
+    </div>
+    <div>
+      <checkbox-label
+        v-for="(visible, idx) in bandVisArr"
+        v-bind:visible="visible"
+        v-bind:name="bandNames[idx]"
+        v-bind:idx="idx"
+        v-bind:kind="'band'"
+        v-bind:key="idx"
+        v-on:checkbox-changed="checkboxChanged($event)"
+      ></checkbox-label>
+    </div>
+    <div>
+      <checkbox-label
+        v-for="(visible, idx) in scoreUpVisArr"
+        v-bind:visible="visible"
+        v-bind:name="skillExplains[idx]"
+        v-bind:idx="idx"
+        v-bind:kind="'scoreUp'"
+        v-bind:key="idx"
+        v-on:checkbox-changed="checkboxChanged($event)"
+      ></checkbox-label>
+    </div>
+    <div>
+      <radio-label
+        v-for="(option, idx) in sortOptions"
+        v-bind:option="option"
+        v-bind:init="membersOrder.sortOption == idx"
+        v-bind:key="idx"
+        v-on:radio-changed="radioChanged($event)"
+      ></radio-label>
+      <select v-model="membersOrder.value" v-on:change="orderChanged()">
+        <option v-for="(text, idx) in membersOrder.list" v-bind:value="idx">
+          {{text}}
+        </option>
+      </select>
+    </div>
+    <ul>
+      <li
+        is="member-item"
+        v-for="m in visibleMembers"
+        v-bind:member="m"
+        v-bind:key="m.id"
+      ></li>
+    </ul>
+  </div>
 </div>
 <!--<input id="test-button" type="button" value="BUTTON">-->
