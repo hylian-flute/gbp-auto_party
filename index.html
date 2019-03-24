@@ -3,6 +3,10 @@
 <meta charset="utf-8">
 <title>gbp-auto_party</title>
 <script src="./scripts/vue.js"></script>
+<script src="./scripts/member-item.js"></script>
+<script src="./scripts/checkbox-label.js"></script>
+<script src="./scripts/radio-label.js"></script>
+<script src="./scripts/area-item.js"></script>
 <script src="./scripts/script.js"></script>
 
 <div id="app">
@@ -68,6 +72,40 @@
         v-bind:member="m"
         v-bind:key="m.id"
       ></li>
+    </ul>
+  </div>
+  <div v-if="currentTab == 1">
+    <h2>所持アイテム</h2>
+    <ul v-for="itemsOfArea in dividedItems">
+      <li
+        is="area-item"
+        v-for="item in itemsOfArea"
+        v-bind:item="item"
+        v-bind:key="item.id"
+      ></li>
+    </ul>
+  </div>
+  <div v-if="currentTab == 2">
+    <h2>イベントボーナス</h2>
+    <h3>タイプ（+20%）</h3>
+    <ul>
+      <li v-for="(type, idx) in typeNames">
+        {{type}}
+      </li>
+    </ul>
+    <h3>キャラクター（+10%）</h3>
+    <ul v-for="band in 5">
+      <li
+        v-for="(name, idx) in charaShortNames.slice(5*(band - 1), 5*band)"
+      >
+        {{name}}
+      </li>
+    </ul>
+    <h3>パラメータ（タイプとキャラクター両方一致で+50%）</h3>
+    <ul>
+      <li v-for="(parameter, idx) in parameterNames">
+        {{parameter}}
+      </li>
     </ul>
   </div>
 </div>

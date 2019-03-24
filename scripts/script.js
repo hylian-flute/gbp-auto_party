@@ -13,11 +13,23 @@ GBP.DATA.characterNames = [
   "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲",
 
 ];
+GBP.DATA.charaShortNames = [
+  "香澄", "たえ", "りみ", "沙綾", "有咲",
+  "蘭", "モカ", "ひまり", "巴", "つぐみ",
+  "彩", "日菜", "千聖", "麻弥", "イヴ",
+  "友希那", "紗夜", "リサ", "あこ", "燐子",
+  "こころ", "薫", "はぐみ", "花音", "美咲",
+];
 GBP.DATA.typeColors = ["#ff345a", "#4057e3", "#44c527", "#ff8400"];
+GBP.DATA.typeColorsLight = ["#ffccd6", "#cfd5f8", "#d0f1c9", "#ffe0bf"];
 GBP.DATA.typeNames = ["パワフル", "クール", "ピュア", "ハッピー"];
 GBP.DATA.bandNames =
   ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ"];
+GBP.DATA.bandColors = ["#f96947","#0a0a10","#ff2699","#6870ec","#ffde5d"];
+GBP.DATA.bandColorsLight =
+  ["#fedad1", "#c2c2c3", "#ffc9e6", "#d9dbfa", "#fff7d7"];
 GBP.DATA.scoreUpBase = [0.1, 0.3, 0.6, 1];
+GBP.DATA.parameterNames = ["パフォーマンス", "テクニック", "ビジュアル"];
 
 // アイテムの全探索は困難なためヒューリスティックなパターンから選択する
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
@@ -262,7 +274,10 @@ GBP.MODEL.readData = function(){
   const xhrMembers = new XMLHttpRequest();
   xhrMembers.addEventListener("load", () => {
     GBP.DATA.members = JSON.parse(xhrMembers.responseText);
+
+    // メンバーのスキルレベル一覧
     GBP.DATA.membersLevels = GBP.DATA.members.map(m => 4);
+
     if(--loadNum <= 0)
       GBP.VIEW.render();
   });
@@ -272,6 +287,11 @@ GBP.MODEL.readData = function(){
   const xhrItems = new XMLHttpRequest();
   xhrItems.addEventListener("load", () => {
     GBP.DATA.items = JSON.parse(xhrItems.responseText);
+
+    // アイテムのレベル一覧
+    GBP.DATA.itemsLevels = GBP.DATA.items.map(
+      item => item.paraUpRateArr.length - 1);
+
     if(--loadNum <= 0)
       GBP.VIEW.render();
   });
@@ -280,141 +300,11 @@ GBP.MODEL.readData = function(){
 }
 
 GBP.VIEW.render = function(){
-  Vue.component("member-item", {
-    props: ["member"],
-    data : function(){
-      return {
-        skillLevel: (() => {
-          if(GBP.DATA.membersLevels[this.member.id] !== null)
-            return GBP.DATA.membersLevels[this.member.id] + 1
-          else
-            return 5
-        })(),
-        available: GBP.DATA.membersLevels[this.member.id] !== null,
-        lightTypeColors: ["#ffccd5", "#cfd5f8", "#d0f0c9", "#ffe0bf"],
-      };
-    },
-    template: `
-      <li
-        v-on:click="clicked"
-        v-bind:style="calcColor"
-      >
-        <div>{{member.name}}</div>
-        <div>
-          {{rarityToStr}} {{charaToStr}}
-        </div>
-        <div>
-          総合力: {{member.parameters.reduce((s, m) => s + m, 0)}}
-          <small>({{member.parameters.join("-")}})</small>
-        </div>
-        <div>
-          スキルLv.
-          <input
-            type="number" min="1" max="5"
-            v-model="skillLevel"
-            v-bind:disabled="!available"
-            v-on:click="e => e.stopPropagation()"
-            v-on:change="skillLevelChanged"
-          >
-        </div>
-        <div>
-          {{member.scoreUpTimeArr[skillLevel - 1].toFixed(1)}}秒間、
-          スコアが{{Math.round(member.scoreUpRate*100)}}%UPする
-        </div>
-      </li>
-    `.replace(/  /g, ""),
-    methods: {
-      clicked: function(){
-        this.available = !this.available;
-        GBP.DATA.membersLevels[this.member.id] =
-          this.available ? this.skillLevel - 1 : null;
-      },
-      skillLevelChanged: function(){
-        if(this.available)
-          GBP.DATA.membersLevels[this.member.id] = this.skillLevel - 1;
-      },
-    },
-    computed: {
-      calcColor: function(){
-        return {
-          backgroundColor: this.lightTypeColors[this.member.type],
-          borderStyle: "solid",
-          borderColor:
-            (this.available ? GBP.DATA.typeColors[this.member.type] :
-            this.lightTypeColors[this.member.type]),
-          borderWidth: "4px",
-        };
-      },
-      charaToStr: function(){
-        return GBP.DATA.characterNames[this.member.character];
-      },
-      rarityToStr: function(){
-        const star = "★";
-        let str = star;
-        for(let i = 0; i < this.member.rarity; ++i){
-          str += star;
-        }
-        return str;
-      },
-    }
-  });
-
-  Vue.component("checkbox-label",{
-    props: ["visible", "name", "idx", "kind"],
-    data: function(){
-      return {
-        value: this.visible
-      };
-    },
-    template: `
-      <label>
-        <input
-          type="checkbox"
-          v-model="value"
-          v-on:change="onchange(idx, kind)"
-        >
-        <span>{{name}}</span>
-      </label>
-    `.replace(/  /g, ""),
-    methods: {
-      onchange: function(idx, kind){
-        this.$emit("checkbox-changed", {
-          idx: idx,
-          kind: kind,
-          value: this.value,
-        });
-      }
-    }
-  });
-
-  Vue.component("radio-label", {
-    props: ["option", "init"],
-    template: `
-      <label>
-        <input
-          type="radio"
-          name="option.name"
-          v-bind:checked="init"
-          v-on:change="onchange($event)"
-        >
-        <span>{{option.text}}</span>
-      </label>
-    `.replace(/  /g, ""),
-    methods: {
-      onchange: function(){
-        this.$emit("radio-changed", {
-          name: this.option.name,
-          idx: this.option.idx,
-        });
-      }
-    }
-  });
-
   GBP.DATA.app = new Vue({
     el: "#app",
     data: {
       appTitle: "編成最適化ツール",
-      tabArr: ["メンバー一覧", "アイテム一覧"],
+      tabArr: ["メンバー一覧", "アイテム一覧", "イベント"],
       currentTab: 0,
       memberHeading: "所持メンバー",
       members: GBP.DATA.members.concat(),
@@ -423,6 +313,7 @@ GBP.VIEW.render = function(){
       scoreUpVisArr: [true, true, true],
       typeNames: GBP.DATA.typeNames,
       bandNames: GBP.DATA.bandNames,
+      charaShortNames: GBP.DATA.charaShortNames,
       skillExplains: ["条件付きスコアアップ", "スコアアップ", "その他"],
       sortOptions: (() => {
         let arr = [];
@@ -441,7 +332,8 @@ GBP.VIEW.render = function(){
         value: 0,
         sortOption: 2,
         list: ["昇順", "降順"]
-      }
+      },
+      parameterNames: GBP.DATA.parameterNames
     },
     created: function(){
       this.sortMembers();
@@ -522,6 +414,7 @@ GBP.VIEW.render = function(){
       },
     },
     computed: {
+      // membersにフィルタを掛けたもの
       visibleMembers: function(){
         return this.members.filter(member => {
           if(!this.typeVisArr[member.type])
@@ -543,6 +436,32 @@ GBP.VIEW.render = function(){
           return true;
         });
       },
+      // 実装済みのエリアアイテムが存在するエリア番号のリスト
+      dividedItems: function(){
+        // 将来的にアイテムが追加実装されてidがエリア順でなくなる可能性が
+        // あるのでコピーしてソート
+        let items = GBP.DATA.items.concat();
+        items.sort((a, b) => {
+          if(a.area != b.area)
+            return a.area - b.area;
+          else
+            return a.id - b.id;
+        });
+
+        // list[エリア(未実装エリアは飛ばして番号を詰める)][アイテム]
+        let list = [];
+        let currentItems = [];
+        let currentArea = items[0].area;
+        items.forEach((item, i) => {
+          currentItems.push(item);
+          if(i + 1 == items.length ||
+            currentArea != (currentArea = items[i + 1].area)){
+            list.push(currentItems);
+            currentItems = [];
+          }
+        });
+        return list;
+      }
     }
   });
 }
@@ -575,6 +494,11 @@ eventBonus.members = [];
 
 window.onload = function(){
   GBP.MODEL.readData();
+  GBP.DATA.eventBonus = {
+    members: [],
+    type: null,
+    parameter: null
+  }
   /*
   eventBonus.type = Math.floor(Math.random()*4);
   eventBonus.parameter = Math.floor(Math.random()*3);
