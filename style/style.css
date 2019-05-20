@@ -1,0 +1,150 @@
+.flex-container{
+  display: flex;
+  flex-wrap: wrap;
+}
+.border-box, .button-label{
+  display: block;
+  border-style: solid;
+  border-width: 4px;
+  border-radius: 8px;
+  margin-right: 4px;
+  white-space: nowrap
+}
+.button-label{
+  cursor: pointer;
+  user-select: none;
+}
+
+input[type="number"]{
+  width: 44px;
+}
+
+body{
+  margin: 8px;
+}
+
+/*スクリーン幅-31px = body幅（chrome）*/
+@media screen and (max-width:856px){
+  body{
+    width: 825px;
+  }
+}
+@media screen and (min-width:1280px){
+  body{
+    width: 1249px;
+  }
+}
+
+header{
+  margin: 24px 0;
+}
+
+header h1{
+  display: inline;
+  margin-right: 16px;
+}
+
+h1 a{
+  text-decoration: none;
+  color: MediumSeaGreen;
+}
+
+/*タブ選択*/
+#tab-nav{
+  margin-bottom: 4px;
+}
+/*タブ選択ボタン*/
+#tab-nav .button-label{
+  width: 112px;
+}
+/*メンバー並び替え*/
+#member-option-div{
+  border: solid 4px Silver;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+/*メンバー並び替えの各行*/
+#member-option-div>div{
+  margin-bottom: 4px;
+}
+/*メンバー並び替えの項目名*/
+#member-option-div .flex-container>div{
+  width: 100px;
+  padding-top: 4px;
+}
+/*メンバー並び替えのボタン*/
+#member-option-div .button-label{
+  width: 146px;
+}
+/*メンバー並び替え内「条件付きスコアアップ」*/
+#skill-refine-div>.button-label:nth-child(2){
+  width: 304px;
+}
+/*一括操作ボタン行*/
+.control-div{
+  margin-bottom: 4px;
+}
+/*一括操作太字*/
+.control-div b{
+  margin-right: 16px;
+}
+/*一括操作ボタン*/
+.control-div input[type="button"]{
+  width: 104px;
+}
+/*メンバー*/
+.member-list-div .button-label, #result-div .border-box{
+  width: 192px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+/*メンバー内のチェックボックス*/
+.member-list-div .button-label input[type="checkbox"]{
+  display: none;
+}
+/*アイテムボタン*/
+.item-div .button-label{
+  width: 184px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+/*アイテム内のチェックボックス*/
+.item-div .button-label input[type="checkbox"]{
+  display: none;
+}
+/*イベントボタン*/
+#event-div .button-label{
+  width: 112px;
+}
+/*イベントボタン（キャラクター）*/
+#event-character-div .button-label{
+  margin-bottom: 4px;
+}
+/*イベントボタン（両方一致）*/
+#event-para-div .button-label{
+  width: 143px;
+}
+/*リザルトのリーター表記*/
+.leader-div{
+  text-align: left;
+  background-color: #fd416f;
+  color: White;
+  padding-left: 0.5em;
+}
+/*リザルトの総合力詳細*/
+.power-div .flex-container::before{
+  content: "■";
+}
+/*リザルトの総合力詳細 項目名*/
+.power-div .flex-container>div:first-child{
+  width: 188px;
+  margin-left: 4px;
+  color: Black;
+}
+/*リザルトの総合力詳細 値*/
+.power-div .flex-container>div:nth-child(2){
+  text-align: right;
+  width: 60px;
+  color: Black;
+}

@@ -1,112 +1,191 @@
 <!DOCTYPE html>
 
 <meta charset="utf-8">
-<title>gbp-auto_party</title>
+<link rel="stylesheet" type="text/css" href="./style/style.css">
 <script src="./scripts/vue.js"></script>
-<script src="./scripts/member-item.js"></script>
-<script src="./scripts/checkbox-label.js"></script>
-<script src="./scripts/radio-label.js"></script>
-<script src="./scripts/area-item.js"></script>
 <script src="./scripts/script.js"></script>
+<title>Top</title>
 
-<div id="app">
-  <h1>{{appTitle}}</h1>
-  <ul>
-    <li v-for="(text, idx) in tabArr" v-on:click="switchTab(idx)">
-      {{text}}
-    </li>
-  </ul>
-  <div v-if="currentTab == 0">
-    <h2>{{memberHeading}}</h2>
-    <div>
-      <checkbox-label
-        v-for="(visible, idx) in typeVisArr"
-        v-bind:visible="visible"
-        v-bind:name="typeNames[idx]"
-        v-bind:idx="idx"
-        v-bind:kind="'type'"
-        v-bind:key="idx"
-        v-on:checkbox-changed="checkboxChanged($event)"
-      ></checkbox-label>
+<header>
+  <h1><a href="./">[ガルパ]&ensp;編成・エリアアイテム最適化ツール</a></h1>
+  <a href="./help.html">ヘルプ</a>
+</header>
+<article id="app-article">
+  <nav id="tab-nav" class="flex-container">
+    <label v-for="(tab, i) in tabNameArr" class="button-label"
+      :key="i" :style="buttonLabelStyle(i == tabOption)">
+      <input type="radio" :value="i" v-model="tabOption"
+        @change="i==3 ? updateURL() : null"><!--TODO これはだめ-->
+      {{tab}}
+    </label>
+    <input type="button" value="入力状態を保存" @click="saveInput">
+  </nav>
+  <div v-if="!onload">読み込み中...</div>
+  <div v-if="onload && tabOption == 0">
+    <div id="member-option-div">
+      <b>メンバー並び替え</b>
+      <div class="flex-container">
+        <div>タイプ</div>
+        <label v-for="(type, i) in typeNameArr" class="button-label"
+          :key="i" :style="buttonLabelStyle(typeRefineArr[i], 'type', i)">
+          <input type="checkbox" v-model="typeRefineArr[i]">
+          {{type}}
+        </label>
+      </div>
+      <div class="flex-container">
+        <div>バンド</div>
+        <label v-for="(band, i) in bandNameArr" class="button-label"
+          :key="i" :style="buttonLabelStyle(bandRefineArr[i], 'band', i)">
+          <input type="checkbox" v-model="bandRefineArr[i]">
+          {{band}}
+        </label>
+      </div>
+      <div id="skill-refine-div" class="flex-container">
+        <div>スキル</div>
+        <label v-for="(skill, i) in skillNameArr" class="button-label"
+          :key="i" :style="buttonLabelStyle(skillRefineArr[i])">
+          <input type="checkbox" v-model="skillRefineArr[i]">
+          {{skill}}
+        </label>
+      </div>
+      <div class="flex-container">
+        <div>レアリティ</div>
+        <label v-for="(rarity, i) in rarityNameArr" class="button-label"
+          :key="i" :style="buttonLabelStyle(rarityRefineArr[i])">
+          <input type="checkbox" v-model="rarityRefineArr[i]">
+          {{rarity}}
+        </label>
+      </div>
+      <div class="flex-container">
+        <div>ソート順</div>
+        <label v-for="(sort, i) in sortNameArr" class="button-label"
+          :key="i" :style="buttonLabelStyle(sortOption == i)">
+          <input type="radio" :value="i" v-model="sortOption">
+          {{sort}}
+        </label>
+      </div>
     </div>
-    <div>
-      <checkbox-label
-        v-for="(visible, idx) in bandVisArr"
-        v-bind:visible="visible"
-        v-bind:name="bandNames[idx]"
-        v-bind:idx="idx"
-        v-bind:kind="'band'"
-        v-bind:key="idx"
-        v-on:checkbox-changed="checkboxChanged($event)"
-      ></checkbox-label>
+    <div class="control-div">
+      <b>表示メンバー一括操作</b>
+      <input type="button" value="所持" @click="memberAllCtrl(true)">
+      <input type="button" value="不所持" @click="memberAllCtrl(false)">
+      <input type="button" value="スキルLv +1" @click="memberAllCtrl(1)">
+      <input type="button" value="スキルLv -1" @click="memberAllCtrl(-1)">
     </div>
-    <div>
-      <checkbox-label
-        v-for="(visible, idx) in scoreUpVisArr"
-        v-bind:visible="visible"
-        v-bind:name="skillExplains[idx]"
-        v-bind:idx="idx"
-        v-bind:kind="'scoreUp'"
-        v-bind:key="idx"
-        v-on:checkbox-changed="checkboxChanged($event)"
-      ></checkbox-label>
+    <div class="member-list-div flex-container">
+      <label v-for="member in displayedMemberArr"
+        class="button-label" :key="member.id"
+        :style="buttonLabelStyle(memberAvailableArr[member.id], 'type', member.type%4)">
+        <input type="checkbox" v-model="memberAvailableArr[member.id]">
+        <div>{{member.name}}</div>
+        <div>
+          {{rarityNameArr[member.rarity]}}&ensp;
+          {{characterNameArr[member.character]}}
+        </div>
+        <div>総合力&ensp;{{member.parameters.reduce((s, p) => s + p, 0)}}</div>
+        <div>
+          スキルLv.
+          <input type="number" min="1" max="5"
+            v-model="memberLevelArr[member.id]">
+        </div>
+        <div>{{skillExplain(member)}}</div>
+      </label>
     </div>
-    <div>
-      <radio-label
-        v-for="(option, idx) in sortOptions"
-        v-bind:option="option"
-        v-bind:init="membersOrder.sortOption == idx"
-        v-bind:key="idx"
-        v-on:radio-changed="radioChanged($event)"
-      ></radio-label>
-      <select v-model="membersOrder.value" v-on:change="orderChanged()">
-        <option v-for="(text, idx) in membersOrder.list" v-bind:value="idx">
-          {{text}}
-        </option>
-      </select>
-    </div>
-    <ul>
-      <li
-        is="member-item"
-        v-for="m in visibleMembers"
-        v-bind:member="m"
-        v-bind:key="m.id"
-      ></li>
-    </ul>
   </div>
-  <div v-if="currentTab == 1">
-    <h2>所持アイテム</h2>
-    <ul v-for="itemsOfArea in dividedItems">
-      <li
-        is="area-item"
-        v-for="item in itemsOfArea"
-        v-bind:item="item"
-        v-bind:key="item.id"
-      ></li>
-    </ul>
+  <div class="item-div" v-if="onload && tabOption == 1">
+    <div class="control-div">
+      <b>アイテム一括操作</b>
+      <input type="button" value="所持" @click="itemAllCtrl(true)">
+      <input type="button" value="不所持" @click="itemAllCtrl(false)">
+      <input type="button" value="レベル +1" @click="itemAllCtrl(1)">
+      <input type="button" value="レベル -1" @click="itemAllCtrl(-1)">
+    </div>
+    <div v-for="(itemArr, i) in splitedItemArr"
+      :key="i" class="flex-container">
+      <label v-for="item in itemArr" :key="item.id" class="button-label"
+        :style="itemStyle(item)">
+        <!--なぜforceUpdateが必要なのか不明-->
+        <input type="checkbox"
+          v-model="itemAvailableArr[item.id]" @change="forceUpdate">
+        <div>{{item.name}}</div>
+        <div>
+          レベル
+          <input type="number" min="1" :max="item.paraUpRateArr.length"
+            v-model="itemLevelArr[item.id]" @change="forceUpdate">
+        </div>
+        <div>{{itemExplain(item)}}</div>
+      </label>
+    </div>
   </div>
-  <div v-if="currentTab == 2">
-    <h2>イベントボーナス</h2>
-    <h3>タイプ（+20%）</h3>
-    <ul>
-      <li v-for="(type, idx) in typeNames">
+  <div id="event-div" v-if="onload && tabOption == 2">
+    <b>タイプボーナス</b>
+    <div class="flex-container">
+      <label v-for="(type, i) in typeNameArr.concat('なし')"
+        class="button-label" :key="i"
+        :style="buttonLabelStyle(i == eventType, i < 4 ? 'type' : null, i)">
+        <input type="radio" :value="i" v-model="eventType">
         {{type}}
-      </li>
-    </ul>
-    <h3>キャラクター（+10%）</h3>
-    <ul v-for="band in 5">
-      <li
-        v-for="(name, idx) in charaShortNames.slice(5*(band - 1), 5*band)"
-      >
-        {{name}}
-      </li>
-    </ul>
-    <h3>パラメータ（タイプとキャラクター両方一致で+50%）</h3>
-    <ul>
-      <li v-for="(parameter, idx) in parameterNames">
-        {{parameter}}
-      </li>
-    </ul>
+      </label>
+    </div>
+    <b>キャラクターボーナス</b>
+    <div id="event-character-div">
+      <div v-for="(band, i) in bandNameArr"
+        class="flex-container" :key="i">
+        <label v-for="(chara, j) in characterNameArr.slice(5*i, 5*(i + 1))"
+          class="button-label" :key="chara"
+          :style="buttonLabelStyle(eventCharacterArr[5*i + j], 'band', i)">
+          <input type="checkbox" v-model="eventCharacterArr[5*i + j]">
+          {{characterNameArr[5*i + j]}}
+        </label>
+      </div>
+    </div>
+    <b>両方一致ボーナス</b>
+    <div id="event-para-div" class="flex-container">
+      <label v-for="(para, i) in paraNameArr.concat('なし')"
+        class="button-label" :key="i"
+        :style="buttonLabelStyle(i == eventPara, i < 3 ? 'para' : null, i)">
+        <input type="radio" :value="i" v-model="eventPara">
+        {{para}}
+      </label>
+    </div>
   </div>
-</div>
-<!--<input id="test-button" type="button" value="BUTTON">-->
+  <div id="result-div"
+    v-if="onload && tabOption == 3 && resultMemberArr !== null">
+    <b>メンバー</b>
+    <div class="flex-container">
+      <div v-for="(member, i) in resultMemberArr"
+        class="border-box" :key="member.id"
+        :style="buttonLabelStyle(true, 'type', member.type)">
+        <div>{{member.name}}</div>
+        <div>
+          {{rarityNameArr[member.rarity]}}&ensp;
+          {{characterNameArr[member.character]}}
+        </div>
+        <div>総合力&ensp;{{member.parameters.reduce((s, p) => s + p, 0)}}</div>
+        <div>{{skillExplain(member)}}</div>
+        <div v-if="i == 0" class="leader-div">リーダー</div>
+      </div>
+    </div>
+    <b>エリアアイテム</b>
+    <div class="flex-container">
+      <div v-for="item in resultItemArr" :key="item.id" class="border-box"
+        :style="itemStyle(item)">
+        <div>{{item.name}}</div>
+        <div>{{itemExplain(item)}}</div>
+      </div>
+    </div>
+    <b>総合力詳細</b>
+    <div class="power-div">
+      <div v-for="(detail, i) in powerDetailNameArr"
+        :key="i" class="flex-container" :style="powerListStyle(i)">
+        <div>{{detail}}</div>
+        <div>
+          {{i < 4 ? resultParaArr[i] : resultParaArr.reduce((s, v) => s + v, 0)}}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-if="onload && tabOption == 3 && resultMemberArr === null">
+    <b>所持メンバーが不足しています</b>
+  </div>
+</article>

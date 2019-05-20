@@ -1,35 +1,9 @@
 "use strict";
 
-const GBP = {DATA: {}, MODEL: {}, VIEW: {}};
-
-// 曲の長さ
+var GBP = {MODEL: {}, VIEW: {}, DATA: {}};
+GBP.DATA.memberArr = [];
+GBP.DATA.itemArr = [];
 GBP.DATA.musicTime = 101;
-
-GBP.DATA.characterNames = [
-  "戸山香澄", "花園たえ", "牛込りみ", "山吹沙綾", "市ヶ谷有咲",
-  "美竹蘭", "青葉モカ", "上原ひまり", "宇田川巴", "羽沢つぐみ",
-  "丸山彩", "氷川日菜", "白鷺千聖", "大和麻弥", "若宮イヴ",
-  "湊友希那", "氷川紗夜", "今井リサ", "宇田川あこ", "白金燐子",
-  "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲",
-
-];
-GBP.DATA.charaShortNames = [
-  "香澄", "たえ", "りみ", "沙綾", "有咲",
-  "蘭", "モカ", "ひまり", "巴", "つぐみ",
-  "彩", "日菜", "千聖", "麻弥", "イヴ",
-  "友希那", "紗夜", "リサ", "あこ", "燐子",
-  "こころ", "薫", "はぐみ", "花音", "美咲",
-];
-GBP.DATA.typeColors = ["#ff345a", "#4057e3", "#44c527", "#ff8400"];
-GBP.DATA.typeColorsLight = ["#ffccd6", "#cfd5f8", "#d0f1c9", "#ffe0bf"];
-GBP.DATA.typeNames = ["パワフル", "クール", "ピュア", "ハッピー"];
-GBP.DATA.bandNames =
-  ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ"];
-GBP.DATA.bandColors = ["#f96947","#0a0a10","#ff2699","#6870ec","#ffde5d"];
-GBP.DATA.bandColorsLight =
-  ["#fedad1", "#c2c2c3", "#ffc9e6", "#d9dbfa", "#fff7d7"];
-GBP.DATA.scoreUpBase = [0.1, 0.3, 0.6, 1];
-GBP.DATA.parameterNames = ["パフォーマンス", "テクニック", "ビジュアル"];
 
 // アイテムの全探索は困難なためヒューリスティックなパターンから選択する
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
@@ -108,21 +82,22 @@ GBP.MODEL.calcBonus = function(member, items, eventBonus){
 
     return bonus + member.paraSum*item.paraUpRate;
   }, 0);
+  member.itemBonus = Math.round(member.itemBonus);
   
   // イベントボーナスの倍率は固定値
   member.eventBonus = 0;
   let applyCount = 0;
-  if(eventBonus.members !== null &&
-    eventBonus.members.indexOf(member.character) >= 0){
-    member.eventBonus += member.paraSum*0.2;
+  if(eventBonus.members !== null && eventBonus.members[member.character]){
+    member.eventBonus += member.paraSum*0.1;
     ++applyCount;
   }
   if(eventBonus.type !== null && eventBonus.type == member.type){
-    member.eventBonus += member.paraSum*0.1;
+    member.eventBonus += member.paraSum*0.2;
     ++applyCount;
   }
   if(eventBonus.parameter !== null && applyCount >= 2)
     member.eventBonus += member.parameters[eventBonus.parameter]*0.5;
+  member.eventBonus = Math.round(member.eventBonus);
 
   member.paraInclBonus = member.paraSum + member.itemBonus + member.eventBonus;
   return member;
@@ -169,6 +144,7 @@ GBP.MODEL.calcTotalPara = function(partyArr){
   });
 
   result.skill *= result.paraInclBonus/GBP.DATA.musicTime;
+  result.skill = Math.round(result.skill);
   result.total = result.paraInclBonus + result.skill;
 
   return result
@@ -216,7 +192,7 @@ GBP.MODEL.optimizeMembersAndItems =
   function(membersLevels, itemsLevels, eventBonus){
 
   // 所持メンバーリスト
-  let members = GBP.DATA.members.filter(
+  let members = GBP.DATA.memberArr.filter(
     (m, i) => membersLevels[i] !== null).map(member => ({
 
     id: member.id,
@@ -230,8 +206,18 @@ GBP.MODEL.optimizeMembersAndItems =
       member.scoreUpTimeArr[membersLevels[member.id]]
   })).sort((a, b) => b.mulScoreUp - a.mulScoreUp);
 
+  //5キャラ以上所持しているか確認
+  let charaCountArr = [];
+  for(let i = 0; i < 25; ++i)
+    charaCountArr.push(false);
+  members.forEach(member => charaCountArr[member.character] = true);
+  if(charaCountArr.reduce((s, c) => s + (c ? 1 : 0), 0) < 5){
+    console.log("キャラ不足");
+    return null;
+  }
+
   // 所持アイテムリスト
-  let items = GBP.DATA.items.filter(
+  let items = GBP.DATA.itemArr.filter(
     (it, i) => itemsLevels[i] !== null).map(item => {
 
     let obj = {};
@@ -256,257 +242,484 @@ GBP.MODEL.optimizeMembersAndItems =
     }
   }));
   console.log(`calculation time = ${Date.now() - st}ms`);
-  console.log("Parameters:");
-  console.log(maxResult.parameters);
-  console.log("Party:");
-  console.log(maxResult.partyArr.map(m => GBP.DATA.members[m.id]));
-  console.log("Items:");
-  console.log(maxResult.items.map(i => GBP.DATA.items[i.id]));
-  console.log("Event:");
-  console.log(eventBonus);
+  return {
+    memberArr: maxResult.partyArr.map(m => m.id),
+    itemArr: maxResult.items.map(i => i.id),
+    paraArr: [maxResult.parameters.base, maxResult.parameters.itemBonus,
+      maxResult.parameters.eventBonus, maxResult.parameters.skill]
+  };
 }
 
-// members.jsonとitems.jsonを読み込む
-GBP.MODEL.readData = function(){
-  // ロードするデータの数
-  let loadNum = 2;
+// URLかlocalStorageから入力を取得する
+GBP.MODEL.getMemory = function(){
+  let code = null;
+  const urlMatch = document.URL.match(/q=[0-9a-z]+/);
+  let storage = null;
+  if(urlMatch !== null) code = urlMatch[0].slice(2);
+  else code = window.localStorage.getItem("gbpAutoParty");
 
-  const xhrMembers = new XMLHttpRequest();
-  xhrMembers.addEventListener("load", () => {
-    GBP.DATA.members = JSON.parse(xhrMembers.responseText);
+  return code;
+};
 
-    // メンバーのスキルレベル一覧
-    GBP.DATA.membersLevels = GBP.DATA.members.map(m => 4);
+// 入力状態を文字列に変換する
+GBP.MODEL.encode = function(){
+  const toBin = (num, digit) => {
+    if((typeof num) == "boolean") return num ? "1" : "0";
+    let bin = num.toString(2);
+    for(let i = bin.length; i < digit; ++i) bin = "0" + bin;
+    return bin;
+  };
+  const boolArrToBin = arr => arr.map(toBin).join("");
+  const paddingBinDigit = bin => {
+    const rem = bin.length%5;
+    if(rem != 0){
+      for(let i = rem; i < 5; ++i) bin = "1" + bin;
+    }
+    return bin;
+  };
+  const binToCode = binCode => {
+    binCode = paddingBinDigit("10" + binCode);
+    let code = "";
+    for(let i = 0; i < binCode.length; i += 5){
+      code += parseInt(binCode.slice(i, i + 5), 2).toString(32);
+    }
+    return code
+  };
+  const levelArrToBin = (arr, max) => {
+    arr = arr.concat();
+    let blockNum = 1;
+    if(max == 5) blockNum = 3;
+    else if(max == 6) blockNum = 5;
+    const digit = Math.ceil(Math.log2(max**blockNum));
+    if(arr.length%blockNum != 0){
+      for(let i = arr.length%blockNum; i < blockNum; ++i) arr.push("1");
+    }
+    let binCode = "";
+    for(let i = 0; i < arr.length; i += blockNum){
+      let num = 0;
+      for(let j = 0; j < blockNum; ++j) num += (arr[i + j] - 1)*(max**j);
+      let bin = num.toString(2);
+      for(let j = bin.length; j < digit; ++j) bin = "0" + bin;
+      binCode += bin;
+    }
+    return binCode;
+  };
 
-    if(--loadNum <= 0)
-      GBP.VIEW.render();
-  });
-  xhrMembers.open("GET", "./data/members.json");
-  xhrMembers.send();
+  const app = GBP.VIEW.app;
+  let code = "00";
+  let binCode = "";
+  binCode += toBin(app.tabOption, 2);
+  binCode += boolArrToBin(app.typeRefineArr);
+  binCode += boolArrToBin(app.bandRefineArr);
+  binCode += boolArrToBin(app.skillRefineArr);
+  binCode += boolArrToBin(app.rarityRefineArr);
+  binCode += toBin(app.sortOption, 1);
+  binCode += toBin(app.eventType, 3);
+  binCode += boolArrToBin(app.eventCharacterArr);
+  binCode += toBin(app.eventPara, 2);
+  code += [
+    binToCode(binCode),
+    app.memberLevelArr.length.toString(32),
+    binToCode(boolArrToBin(app.memberAvailableArr)),
+    binToCode(levelArrToBin(app.memberLevelArr, 5)),
+    app.itemLevelArr.length.toString(32),
+    binToCode(boolArrToBin(app.itemAvailableArr)),
+    binToCode(levelArrToBin(app.itemLevelArr, 6))
+  ].join("w");
+  return code;
+};
 
-  const xhrItems = new XMLHttpRequest();
-  xhrItems.addEventListener("load", () => {
-    GBP.DATA.items = JSON.parse(xhrItems.responseText);
-
-    // アイテムのレベル一覧
-    GBP.DATA.itemsLevels = GBP.DATA.items.map(
-      item => item.paraUpRateArr.length - 1);
-
-    if(--loadNum <= 0)
-      GBP.VIEW.render();
-  });
-  xhrItems.open("GET", "./data/items.json");
-  xhrItems.send();
-}
-
-GBP.VIEW.render = function(){
-  GBP.DATA.app = new Vue({
-    el: "#app",
-    data: {
-      appTitle: "編成最適化ツール",
-      tabArr: ["メンバー一覧", "アイテム一覧", "イベント"],
-      currentTab: 0,
-      memberHeading: "所持メンバー",
-      members: GBP.DATA.members.concat(),
-      typeVisArr: [true, true, true, true],
-      bandVisArr: [true, true, true, true, true],
-      scoreUpVisArr: [true, true, true],
-      typeNames: GBP.DATA.typeNames,
-      bandNames: GBP.DATA.bandNames,
-      charaShortNames: GBP.DATA.charaShortNames,
-      skillExplains: ["条件付きスコアアップ", "スコアアップ", "その他"],
-      sortOptions: (() => {
-        let arr = [];
-        const textArr = ["総合力", "レアリティ", "キャラクター"];
-        for(let i = 0; i < 3; i++){
-          arr.push({
-            name: "sortOption",
-            text: textArr[i],
-            idx: i
-          });
-        }
-
-        return arr;
-      })(),
-      membersOrder: {
-        value: 0,
-        sortOption: 2,
-        list: ["昇順", "降順"]
-      },
-      parameterNames: GBP.DATA.parameterNames
-    },
-    created: function(){
-      this.sortMembers();
-    },
-    methods: {
-      switchTab: function(idx){
-        this.currentTab = idx;
-      },
-      checkboxChanged: function(e){
-        let target;
-        if(e.kind == "type")
-          target = this.typeVisArr;
-        else if(e.kind == "band")
-          target = this.bandVisArr;
-        else if(e.kind == "scoreUp")
-          target = this.scoreUpVisArr;
-        Vue.set(target, e.idx, e.value);
-      },
-      radioChanged: function(e){
-        if(e.name == "sortOption"){
-          this.membersOrder.sortOption = e.idx;
-          this.sortMembers();
-        }
-      },
-      sortMembers: function(){
-        let callback;
-        if(this.membersOrder.sortOption == 0){
-          callback = (a, b) => {
-            let paraA, paraB;
-            [paraA, paraB] = [a, b].map(member =>
-              member.parameters.reduce((acc, p) => acc + p, 0));
-
-            if(paraA != paraB){
-              const diff = paraA - paraB;
-              return (this.membersOrder.value == 0 ? diff : -diff);
-            }else if(a.character != b.character)
-              return a.character - b.character;
-            else
-              return a.id - b.id;
-          };
-        }else if(this.membersOrder.sortOption == 1){
-          callback = (a, b) => {
-            if(a.rarity != b.rarity){
-              const diff = a.rarity - b.rarity;
-              return (this.membersOrder.value == 0 ? diff : -diff);
-            }else if(a.character != b.character)
-              return a.character - b.character;
-            else{
-              let paraA, paraB;
-              [paraA, paraB] = [a, b].map(member =>
-                member.parameters.reduce((acc, p) => acc + p, 0));
-              if(paraA != paraB)
-                return paraA - paraB;
-              else
-                return a.id - b.id;
-            }
-          };
-        }else{
-          callback = (a, b) => {
-            if(a.character != b.character){
-              const diff = a.character - b.character;
-              return (this.membersOrder.value == 0 ? diff : -diff);
-            }else{
-              let paraA, paraB;
-              [paraA, paraB] = [a, b].map(member =>
-                member.parameters.reduce((acc, p) => acc + p, 0));
-              if(paraA != paraB)
-                return paraB - paraA;
-              else
-                return a.id - b.id;
-            }
-          };
-        }
-        this.members.sort(callback);
-      },
-      orderChanged: function(){
-        this.sortMembers();
-      },
-    },
-    computed: {
-      // membersにフィルタを掛けたもの
-      visibleMembers: function(){
-        return this.members.filter(member => {
-          if(!this.typeVisArr[member.type])
-            return false;
-
-          if(!this.bandVisArr[Math.floor(member.character/5)])
-            return false;
-
-          let scoreUpKind = 1;
-          let diff = member.scoreUpRate -
-            GBP.DATA.scoreUpBase[member.rarity];
-          if(diff > 0)
-            scoreUpKind = 0;
-          else if(diff < 0)
-            scoreUpKind = 2;
-          if(!this.scoreUpVisArr[scoreUpKind])
-            return false;
-
-          return true;
-        });
-      },
-      // 実装済みのエリアアイテムが存在するエリア番号のリスト
-      dividedItems: function(){
-        // 将来的にアイテムが追加実装されてidがエリア順でなくなる可能性が
-        // あるのでコピーしてソート
-        let items = GBP.DATA.items.concat();
-        items.sort((a, b) => {
-          if(a.area != b.area)
-            return a.area - b.area;
-          else
-            return a.id - b.id;
-        });
-
-        // list[エリア(未実装エリアは飛ばして番号を詰める)][アイテム]
-        let list = [];
-        let currentItems = [];
-        let currentArea = items[0].area;
-        items.forEach((item, i) => {
-          currentItems.push(item);
-          if(i + 1 == items.length ||
-            currentArea != (currentArea = items[i + 1].area)){
-            list.push(currentItems);
-            currentItems = [];
-          }
-        });
-        return list;
+// 文字列から入力状態を復元する
+GBP.MODEL.decode = function(code){
+  const toBinCode = str => {
+    let binCode = "";
+    for(let i = 0; i < str.length; ++i){
+      let bin = parseInt(str[i], 32).toString(2);
+      for(let j = bin.length; j < 5; ++j) bin = "0" + bin;
+      binCode += bin;
+    }
+    return binCode;
+  };
+  const readBoolArr = (binCode, p, len) => {
+    const arr = [];
+    for(let i = 0; i < len; ++i){
+      arr.push(binCode[p++] == "1" ? true : false);
+    }
+    return arr;
+  };
+  const readLevelArr = (binCode, max) => {
+    binCode = binCode.slice(binCode.indexOf("0") + 1);
+    let blockNum = 1;
+    if(max == 5) blockNum = 3;
+    else if(max == 6) blockNum = 5;
+    const digit = Math.ceil(Math.log2(max**blockNum));
+    const arr = [];
+    for(let i = 0; i < binCode.length; i += digit){
+      let num = parseInt(binCode.slice(i, i + digit), 2);
+      for(let j = 0; j < blockNum; ++j){
+        arr.push((num%max + 1).toString(10));
+        num = Math.floor(num/max);
       }
     }
-  });
-}
+    return arr;
+  };
+  const map = new Map();
+  let binCodeArr = code.slice(2).split("w").map(toBinCode);
+  let p = binCodeArr[0].indexOf("0") + 1;
+  map.set("tabOption", parseInt(binCodeArr[0].slice(p, p + 2), 2));
+  p += 2;
+  map.set("typeRefineArr", readBoolArr(binCodeArr[0], p, 4));
+  p += 4;
+  map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 5));
+  p += 5;
+  map.set("skillRefineArr", readBoolArr(binCodeArr[0], p, 3));
+  p += 3;
+  map.set("rarityRefineArr", readBoolArr(binCodeArr[0], p, 4));
+  p += 4;
+  map.set("sortOption", parseInt(binCodeArr[0][p], 2));
+  p += 1;
+  map.set("eventType", parseInt(binCodeArr[0].slice(p, p + 3), 2));
+  p += 3;
+  map.set("eventCharacterArr", readBoolArr(binCodeArr[0], p, 25));
+  p += 25;
+  map.set("eventPara", parseInt(binCodeArr[0].slice(p, p + 2), 2));
 
-let membersLevels = [];
-for(let i = 0; i < 503; ++i){
-  let r = Math.floor(Math.random()*6);
-  membersLevels.push(r < 5 ? r : null);
-}
-let itemsLevels = [];
-for(let i = 0; i < 46; ++i){
-  let r = Math.floor(Math.random()*6);
-  itemsLevels.push(r < 5 ? r : null);
-}
-let eventBonus = {};
-eventBonus.members = [];
-{
-  let selectedMembers = [];
-  for(let i = 0; i < 25; ++i)
-    selectedMembers.push(false);
-  for(let i = 0; i < 5; ++i){
-    let r = Math.floor(Math.random()*25);
-    while(selectedMembers[r]){
-      r = (r + 1)%25
+  const memberLength = parseInt(binCodeArr[1], 2);
+  map.set("memberAvailableArr",
+    readBoolArr(binCodeArr[2], binCodeArr[2].indexOf("0") + 1, memberLength));
+  map.set("memberLevelArr",
+    readLevelArr(binCodeArr[3], 5).slice(0, memberLength));
+  const itemLength = parseInt(binCodeArr[4], 2);
+  map.set("itemAvailableArr",
+    readBoolArr(binCodeArr[5], binCodeArr[5].indexOf("0") + 1, itemLength));
+  map.set("itemLevelArr",
+    readLevelArr(binCodeArr[6], 6).slice(0, itemLength));
+  return map;
+};
+
+GBP.VIEW.init = function(){
+  let para = {data: {}, methods: {}, computed: {}};
+  para.el = "#app-article";
+
+  // 定数データ
+  para.data.baseColor = "MediumSeaGreen";
+  para.data.baseLightColor = "#ceecdc";
+  para.data.tabNameArr = ["メンバー", "アイテム", "イベント", "結果"];
+  para.data.typeNameArr = ["パワフル", "クール", "ピュア", "ハッピー"];
+  para.data.typeColorArr = ["#ff345a", "#4057e3", "#44c527", "#ff8400"];
+  para.data.typeLightColorArr = ["#ffccd6", "#cfd5f8", "#d0f1c9", "#ffe0bf"];
+  para.data.bandNameArr =
+    ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ"];
+  para.data.bandColorArr = ["#f96947","#0a0a10","#ff2699","#6870ec","#ffde5d"];
+  para.data.bandLightColorArr =
+    ["#fedad1", "#c2c2c3", "#ffc9e6", "#d9dbfa", "#fff7d7"];
+  para.data.skillNameArr = 
+    ["条件付きスコアアップ", "スコアアップ", "その他"];
+  para.data.rarityNameArr = ["★", "★★", "★★★", "★★★★"];
+  para.data.sortNameArr = ["キャラクター", "総合力"];
+  para.data.characterNameArr = [
+    "戸山香澄", "花園たえ", "牛込りみ", "山吹沙綾", "市ヶ谷有咲",
+    "美竹蘭", "青葉モカ", "上原ひまり", "宇田川巴", "羽沢つぐみ",
+    "丸山彩", "氷川日菜", "白鷺千聖", "大和麻弥", "若宮イヴ",
+    "湊友希那", "氷川紗夜", "今井リサ", "宇田川あこ", "白金燐子",
+    "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲"
+  ];
+  para.data.paraNameArr = ["パフォーマンス", "テクニック", "ビジュアル"];
+  para.data.paraColorArr = ["#ff0053", "#00a3ff", "#ffa300"];
+  para.data.paraLightColorArr = ["#ffbcd4", "#bce8ff", "#ffe8bc"];
+  para.data.powerDetailNameArr = ["バンドパラメータ",
+    "エリアアイテムボーナス", "編成ボーナス", "スキル期待値", "合計"];
+  para.data.powerDetailColorArr = ["#fe8903", "#1993fb", "#fb93d3"];
+
+  // 変数データ
+  para.data.onload = false; //メンバーとアイテム一覧を読み込み終わったか
+  para.data.tabOption = 0;
+  para.data.typeRefineArr = [true, true, true, true];
+  para.data.bandRefineArr = [true, true, true, true, true];
+  para.data.skillRefineArr = [true, true, true];
+  para.data.rarityRefineArr = [true, true, true, true];
+  para.data.sortOption = 0;
+  para.data.memberAvailableArr = []; //値の範囲は1-5
+  para.data.memberLevelArr = [];
+  para.data.itemAvailableArr = []; //値の範囲は1-5
+  para.data.itemLevelArr = [];
+  para.data.eventType = 4; //4は「なし」
+  para.data.eventCharacterArr = para.data.characterNameArr.map(c => false);
+  para.data.eventPara = 3; //3は「なし」
+  para.data.resultMemberArr = null;
+  para.data.resultItemArr = null;
+  para.data.resultParaArr = null;
+
+  para.methods.saveInput = function(){
+    const currentTab = this.tabOption;
+    this.tabOption = 0;
+    window.localStorage.setItem("gbpAutoParty", GBP.MODEL.encode());
+    this.tabOption = currentTab;
+  };
+  para.methods.buttonLabelStyle = function(pressed, mode, i){
+    let color = null;
+    let lightColor = null;
+    if(mode == "type"){
+      color = this.typeColorArr[i];
+      lightColor = this.typeLightColorArr[i];
+    }else if(mode == "band"){
+      color = this.bandColorArr[i];
+      lightColor = this.bandLightColorArr[i];
+    }else if(mode == "para"){
+      color = this.paraColorArr[i];
+      lightColor = this.paraLightColorArr[i];
+    }else{
+      color = this.baseColor;
+      lightColor = this.baseLightColor;
     }
-    eventBonus.members.push(r);
-    selectedMembers[r] = true;
+    return {
+      backgroundColor: lightColor,
+      borderColor: pressed ? color : lightColor
+    }
+  };
+  para.methods.filterdMemberArr = function(){
+    return GBP.DATA.memberArr.filter(member => {
+      // スキルの区分の計算
+      const baseRate = [0.1, 0.3, 0.6, 1][member.rarity];
+      let skill = 1;
+      if(member.scoreUpRate > baseRate)
+        skill = 0;
+      else if(member.scoreUpRate < baseRate)
+        skill = 2;
+
+      // 絞り込み
+      if(!this.typeRefineArr[member.type] ||
+        !this.bandRefineArr[Math.floor(member.character/5)] ||
+        !this.skillRefineArr[skill] || !this.rarityRefineArr[member.rarity])
+        return false;
+
+      return true;
+    });
+  };
+  para.methods.memberAllCtrl = function(arg){
+    const memberIdArr = this.filterdMemberArr().map(m => m.id);
+    memberIdArr.forEach(id => {
+      if(arg === true) Vue.set(this.memberAvailableArr, id, true);
+      else if(arg === false) Vue.set(this.memberAvailableArr, id, false);
+      else if(arg === 1){
+        const level = this.memberLevelArr[id];
+        if(level == "5") return;
+        else Vue.set(
+          this.memberLevelArr, id, (parseInt(level, 10) + 1).toString(10));
+      }else if(arg === -1){
+        const level = this.memberLevelArr[id];
+        if(level == "1") return;
+        else Vue.set(this.memberLevelArr, id, (level - 1).toString(10));
+      }
+    });
+  };
+  para.methods.skillExplain = function(member){
+    const level = this.memberLevelArr[member.id] - 1;
+    const time = member.scoreUpTimeArr[level];
+    const rate = Math.round(member.scoreUpRate*100);
+    return `${time}${Number.isInteger(time) ? '.0' : ''}秒間${rate}%UP`;
+  };
+  para.methods.itemAllCtrl = function(arg){
+    for(let id = 0; id < GBP.DATA.itemArr.length; ++id){
+      if(arg === true) Vue.set(this.itemAvailableArr, id, true);
+      else if(arg === false) Vue.set(this.itemAvailableArr, id, false);
+      else if(arg === 1){
+        const level = this.itemLevelArr[id];
+        const maxLevel =
+          GBP.DATA.itemArr[id].paraUpRateArr.length.toString(10);
+        if(level == maxLevel) continue;
+        else Vue.set(
+          this.itemLevelArr, id, (parseInt(level, 10) + 1).toString(10));
+      }else if(arg === -1){
+        const level = this.itemLevelArr[id];
+        if(level == "1") continue;
+        else Vue.set(this.itemLevelArr, id, (level - 1).toString(10));
+      }
+    }
+  };
+  para.methods.itemStyle = function(item){
+    const available = this.itemAvailableArr[item.id];
+    if(item.type !== null)
+      return this.buttonLabelStyle(available, "type", item.type);
+    else if(item.characters !== null)
+      return this.buttonLabelStyle(available, "band", item.characters[0]/5);
+
+    return this.buttonLabelStyle(available);
+  };
+  para.methods.forceUpdate = function(){
+    this.$forceUpdate();
+  };
+  para.methods.itemExplain = function(item){
+    const level = this.itemLevelArr[item.id] - 1;
+    let target = "全て";
+    if(item.type !== null)
+      target = this.typeNameArr[item.type];
+    else if(item.characters !== null)
+      target = this.bandNameArr[item.characters[0]/5];
+    let rate = "" + Math.round(item.paraUpRateArr[level]*1000);
+    rate = rate.slice(0, -1) + "." + rate.slice(-1);
+    if(rate[0] == ".")
+      rate = "0" + rate;
+    return `${target} ${rate}%UP`;
+  };
+  para.methods.updateURL = function(){
+    document.location.href = `./?q=${GBP.MODEL.encode()}`;
   }
+  para.methods.powerListStyle = function(idx){
+    let color = this.baseColor;
+    if(idx < 3) color = this.powerDetailColorArr[idx];
+    if(idx == 4) color = "White";
+    return {color: color};
+  };
+
+  para.computed.displayedMemberArr = function(){
+    if(!this.onload)
+      return [];
+
+    let memberArr = this.filterdMemberArr();
+
+    // パラメータの合計を返す関数（ソートで使う）
+    const paraSum = m => m.parameters.reduce((s, p) => s + p, 0);
+    
+    // ソート
+    if(this.sortOption == 0){
+      memberArr.sort((a, b) => {
+        const characterDiff = a.character - b.character;
+        let paraSumDiff = null;
+        let typeDiff = null
+        if(characterDiff != 0)
+          return characterDiff;
+        else if((paraSumDiff = paraSum(b) - paraSum(a)) != 0)
+          return paraSumDiff;
+        else if((typeDiff = a.type - b.type) != 0)
+          return typeDiff;
+
+        return a.id - b.id;
+      });
+    }else{
+      memberArr.sort((a, b) => {
+        const paraSumDiff = paraSum(b) - paraSum(a);
+        let characterDiff = null;
+        let typeDiff = null;
+        if(paraSumDiff != 0)
+          return paraSumDiff;
+        else if((characterDiff = a.character - b.character) != 0)
+          return characterDiff;
+        else if((typeDiff = a.type - b.type) != 0)
+          return typeDiff;
+
+        return a.id - b.id;
+      });
+    }
+
+    return memberArr;
+  };
+  para.computed.splitedItemArr = function(){
+    if(!this.onload)
+      return [];
+
+    let itemArr = GBP.DATA.itemArr.concat();
+    itemArr.sort((a, b) => {
+      const areaDiff = a.area - b.area;
+      if(areaDiff != 0)
+        return areaDiff;
+      else
+        return a.id - b.id;
+    });
+
+    let itemArrArr = [];
+    let prevArea = itemArr[0].area;
+    let areaItemArr = [itemArr[0]];
+    for(let i = 1; i < itemArr.length; ++i){
+      if(itemArr[i].area != prevArea){
+        itemArrArr.push(areaItemArr);
+        areaItemArr = [];
+      }
+      areaItemArr.push(itemArr[i]);
+      prevArea = itemArr[i].area;
+    }
+    if(areaItemArr.length > 0)
+      itemArrArr.push(areaItemArr);
+
+    return itemArrArr;
+  }
+
+  this.app = new Vue(para);
 }
 
 window.onload = function(){
-  GBP.MODEL.readData();
-  GBP.DATA.eventBonus = {
-    members: [],
-    type: null,
-    parameter: null
-  }
-  /*
-  eventBonus.type = Math.floor(Math.random()*4);
-  eventBonus.parameter = Math.floor(Math.random()*3);
+  GBP.VIEW.init();
 
-  GBP.MODEL.readData();
+  const onloadEvent = () => {
+    const code = GBP.MODEL.getMemory();
+    if(code !== null){
+      const data = GBP.MODEL.decode(code);
+      for(let [key, value] of data){
+        GBP.VIEW.app[key] = value;
+      }
+      if(data.get("tabOption") == 3){
+        const memberLevelArr = data.get("memberAvailableArr").map(
+          (avail, idx) => (avail ? data.get("memberLevelArr")[idx] - 1 : null));
+        const itemLevelArr = data.get("itemAvailableArr").map(
+          (avail, idx) => (avail ? data.get("itemLevelArr")[idx] - 1 : null));
+        let eventBonus = {};
+        eventBonus.type = data.get("eventType");
+        if(eventBonus.type >= 4)
+          eventBonus.type = null;
+        eventBonus.members = data.get("eventCharacterArr");
+        eventBonus.parameter = data.get("eventPara");
+        if(eventBonus.parameter >= 3)
+          eventBonus.parameter = null;
+        const result = GBP.MODEL.optimizeMembersAndItems(
+          memberLevelArr, itemLevelArr, eventBonus);
+        if(result !== null){
+          GBP.VIEW.app.resultMemberArr =
+            result.memberArr.map(id => GBP.DATA.memberArr[id]);
+          GBP.VIEW.app.resultItemArr =
+            result.itemArr.map(id => GBP.DATA.itemArr[id]);
+          GBP.VIEW.app.resultParaArr = result.paraArr;
+        }else{
+          GBP.VIEW.app.resultMemberArr = null;
+        }
+      }
+    }
+    GBP.VIEW.app.onload = true;
+  };
 
-  document.getElementById("test-button").onclick =
-    GBP.MODEL.optimizeMembersAndItems.bind(
-    GBP.MODEL, membersLevels, itemsLevels, eventBonus);
-  */
+  let loadStuckNum = 2;
+  // メンバー一覧読み込み
+  const xhrMember = new XMLHttpRequest();
+  xhrMember.addEventListener("load", () => {
+    GBP.DATA.memberArr = JSON.parse(xhrMember.responseText);
+    let memberAvailableArr = [];
+    let memberLevelArr = [];
+    for(let i = 0; i < GBP.DATA.memberArr.length; ++i){
+      memberAvailableArr.push(false);
+      memberLevelArr.push("1");
+    }
+    GBP.VIEW.app.memberAvailableArr = memberAvailableArr;
+    GBP.VIEW.app.memberLevelArr = memberLevelArr;
+    if(--loadStuckNum == 0)
+      onloadEvent();
+  });
+  xhrMember.open("GET", "./data/members.json");
+  xhrMember.send();
+
+  // アイテム一覧読み込み
+  const xhrItem = new XMLHttpRequest();
+  xhrItem.addEventListener("load", () => {
+    GBP.DATA.itemArr = JSON.parse(xhrItem.responseText);
+    let itemAvailableArr = [];
+    let itemLevelArr = [];
+    for(let i = 0; i < GBP.DATA.itemArr.length; ++i){
+      itemAvailableArr.push(false);
+      itemLevelArr.push("1");
+    }
+    GBP.VIEW.app.itemAvailableArr = itemAvailableArr;
+    GBP.VIEW.app.itemLevelArr = itemLevelArr;
+    if(--loadStuckNum == 0)
+      onloadEvent();
+  });
+  xhrItem.open("GET", "./data/items.json");
+  xhrItem.send();
 };
