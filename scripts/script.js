@@ -397,6 +397,25 @@ GBP.MODEL.decode = function(code){
   return map;
 };
 
+GBP.MODEL.readOldStorage = function(){
+  const prefix = "girlsBandParty_autoParty_";
+  const map = new Map();
+  map.set("memberAvailableArr",
+    JSON.parse(window.localStorage.getItem(prefix + "cards")));
+  map.set("memberLevelArr", JSON.parse(window.localStorage
+    .getItem(prefix + "skills")).map(n => n.toString(10)));
+  map.set("itemAvailableArr", JSON.parse(window.localStorage
+    .getItem(prefix + "items")).map(item => item.value > 0));
+  map.set("itemLevelArr", JSON.parse(window.localStorage
+    .getItem(prefix + "items")).map((item, idx) => {
+      if(item.value == 0) return "1";
+      return (GBP.DATA.itemArr[idx]
+        .paraUpRateArr.indexOf(item.value/100) + 1).toString(10);
+    })
+  );
+  return map;
+};
+
 GBP.VIEW.init = function(){
   let para = {data: {}, methods: {}, computed: {}};
   para.el = "#app-article";
@@ -655,7 +674,8 @@ window.onload = function(){
     if(code !== null){
       const data = GBP.MODEL.decode(code);
       for(let [key, value] of data){
-        GBP.VIEW.app[key] = value;
+        if (typeof value == "number") GBP.VIEW.app[key] = value;
+        else value.forEach((v, idx) => GBP.VIEW.app[key][idx] = v);
       }
       if(data.get("tabOption") == 3){
         const memberLevelArr = data.get("memberAvailableArr").map(
@@ -682,8 +702,13 @@ window.onload = function(){
           GBP.VIEW.app.resultMemberArr = null;
         }
       }
+    }else if(
+      window.localStorage.getItem("girlsBandParty_autoParty_cards") !== null){
+      const data = GBP.MODEL.readOldStorage();
+      for(let [key, value] of data){ //旧ストレージからの情報は配列のみ反映
+        value.forEach((v, idx) => GBP.VIEW.app[key][idx] = v);
+      }
     }
-    GBP.VIEW.app.onload = true;
   };
 
   let loadStuckNum = 2;
@@ -699,8 +724,14 @@ window.onload = function(){
     }
     GBP.VIEW.app.memberAvailableArr = memberAvailableArr;
     GBP.VIEW.app.memberLevelArr = memberLevelArr;
-    if(--loadStuckNum == 0)
-      onloadEvent();
+    if(--loadStuckNum == 0){
+      try{
+        onloadEvent();
+      }catch(e){
+        console.log(e);
+      }
+      GBP.VIEW.app.onload = true;
+    }
   });
   xhrMember.open("GET", "./data/members.json");
   xhrMember.send();
@@ -717,8 +748,10 @@ window.onload = function(){
     }
     GBP.VIEW.app.itemAvailableArr = itemAvailableArr;
     GBP.VIEW.app.itemLevelArr = itemLevelArr;
-    if(--loadStuckNum == 0)
+    if(--loadStuckNum == 0){
       onloadEvent();
+      GBP.VIEW.app.onload = true;
+    }
   });
   xhrItem.open("GET", "./data/items.json");
   xhrItem.send();
