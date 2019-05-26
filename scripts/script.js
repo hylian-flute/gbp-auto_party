@@ -212,7 +212,6 @@ GBP.MODEL.optimizeMembersAndItems =
     charaCountArr.push(false);
   members.forEach(member => charaCountArr[member.character] = true);
   if(charaCountArr.reduce((s, c) => s + (c ? 1 : 0), 0) < 5){
-    console.log("キャラ不足");
     return null;
   }
 
@@ -313,7 +312,7 @@ GBP.MODEL.encode = function(){
   binCode += boolArrToBin(app.bandRefineArr);
   binCode += boolArrToBin(app.skillRefineArr);
   binCode += boolArrToBin(app.rarityRefineArr);
-  binCode += toBin(app.sortOption, 1);
+  binCode += toBin(app.sortOption, 2);
   binCode += toBin(app.eventType, 3);
   binCode += boolArrToBin(app.eventCharacterArr);
   binCode += toBin(app.eventPara, 2);
@@ -376,8 +375,8 @@ GBP.MODEL.decode = function(code){
   p += 3;
   map.set("rarityRefineArr", readBoolArr(binCodeArr[0], p, 4));
   p += 4;
-  map.set("sortOption", parseInt(binCodeArr[0][p], 2));
-  p += 1;
+  map.set("sortOption", parseInt(binCodeArr[0].slice(p, p + 2), 2));
+  p += 2;
   map.set("eventType", parseInt(binCodeArr[0].slice(p, p + 3), 2));
   p += 3;
   map.set("eventCharacterArr", readBoolArr(binCodeArr[0], p, 25));
@@ -416,6 +415,40 @@ GBP.MODEL.readOldStorage = function(){
   return map;
 };
 
+// エンコードしたコードを使って結果を更新する
+GBP.MODEL.updateResultFromCode = function (code) {
+  const data = GBP.MODEL.decode(code);
+  for(let [key, value] of data){
+    if (typeof value == "number") GBP.VIEW.app[key] = value;
+    else value.forEach((v, idx) => GBP.VIEW.app[key][idx] = v);
+  }
+  if(data.get("tabOption") == 3){
+    const memberLevelArr = data.get("memberAvailableArr").map(
+      (avail, idx) => (avail ? data.get("memberLevelArr")[idx] - 1 : null));
+    const itemLevelArr = data.get("itemAvailableArr").map(
+      (avail, idx) => (avail ? data.get("itemLevelArr")[idx] - 1 : null));
+    let eventBonus = {};
+    eventBonus.type = data.get("eventType");
+    if(eventBonus.type >= 4)
+      eventBonus.type = null;
+    eventBonus.members = data.get("eventCharacterArr");
+    eventBonus.parameter = data.get("eventPara");
+    if(eventBonus.parameter >= 3)
+      eventBonus.parameter = null;
+    const result = GBP.MODEL.optimizeMembersAndItems(
+      memberLevelArr, itemLevelArr, eventBonus);
+    if(result !== null){
+      GBP.VIEW.app.resultMemberArr =
+        result.memberArr.map(id => GBP.DATA.memberArr[id]);
+      GBP.VIEW.app.resultItemArr =
+        result.itemArr.map(id => GBP.DATA.itemArr[id]);
+      GBP.VIEW.app.resultParaArr = result.paraArr;
+    }else{
+      GBP.VIEW.app.resultMemberArr = null;
+    }
+  }
+};
+
 GBP.VIEW.init = function(){
   let para = {data: {}, methods: {}, computed: {}};
   para.el = "#app-article";
@@ -435,7 +468,7 @@ GBP.VIEW.init = function(){
   para.data.skillNameArr = 
     ["条件付きスコアアップ", "スコアアップ", "その他"];
   para.data.rarityNameArr = ["★", "★★", "★★★", "★★★★"];
-  para.data.sortNameArr = ["キャラクター", "総合力"];
+  para.data.sortNameArr = ["キャラクター", "総合力", "最近の追加"];
   para.data.characterNameArr = [
     "戸山香澄", "花園たえ", "牛込りみ", "山吹沙綾", "市ヶ谷有咲",
     "美竹蘭", "青葉モカ", "上原ひまり", "宇田川巴", "羽沢つぐみ",
@@ -581,9 +614,13 @@ GBP.VIEW.init = function(){
       rate = "0" + rate;
     return `${target} ${rate}%UP`;
   };
-  para.methods.updateURL = function(){
-    document.location.href = `./?q=${GBP.MODEL.encode()}`;
-  }
+  para.methods.pressResult = function(){
+    this.onload = false;
+    const code = GBP.MODEL.encode();
+    GBP.MODEL.updateResultFromCode(code);
+    this.onload = true;
+    window.history.replaceState(null, "", `./?q=${code}`);
+  };
   para.methods.powerListStyle = function(idx){
     let color = this.baseColor;
     if(idx < 3) color = this.powerDetailColorArr[idx];
@@ -615,7 +652,7 @@ GBP.VIEW.init = function(){
 
         return a.id - b.id;
       });
-    }else{
+    }else if(this.sortOption == 1) {
       memberArr.sort((a, b) => {
         const paraSumDiff = paraSum(b) - paraSum(a);
         let characterDiff = null;
@@ -629,6 +666,8 @@ GBP.VIEW.init = function(){
 
         return a.id - b.id;
       });
+    }else{
+      memberArr.sort((a, b) => b.id - a.id);
     }
 
     return memberArr;
@@ -671,44 +710,15 @@ window.onload = function(){
 
   const onloadEvent = () => {
     const code = GBP.MODEL.getMemory();
-    if(code !== null){
-      const data = GBP.MODEL.decode(code);
-      for(let [key, value] of data){
-        if (typeof value == "number") GBP.VIEW.app[key] = value;
-        else value.forEach((v, idx) => GBP.VIEW.app[key][idx] = v);
-      }
-      if(data.get("tabOption") == 3){
-        const memberLevelArr = data.get("memberAvailableArr").map(
-          (avail, idx) => (avail ? data.get("memberLevelArr")[idx] - 1 : null));
-        const itemLevelArr = data.get("itemAvailableArr").map(
-          (avail, idx) => (avail ? data.get("itemLevelArr")[idx] - 1 : null));
-        let eventBonus = {};
-        eventBonus.type = data.get("eventType");
-        if(eventBonus.type >= 4)
-          eventBonus.type = null;
-        eventBonus.members = data.get("eventCharacterArr");
-        eventBonus.parameter = data.get("eventPara");
-        if(eventBonus.parameter >= 3)
-          eventBonus.parameter = null;
-        const result = GBP.MODEL.optimizeMembersAndItems(
-          memberLevelArr, itemLevelArr, eventBonus);
-        if(result !== null){
-          GBP.VIEW.app.resultMemberArr =
-            result.memberArr.map(id => GBP.DATA.memberArr[id]);
-          GBP.VIEW.app.resultItemArr =
-            result.itemArr.map(id => GBP.DATA.itemArr[id]);
-          GBP.VIEW.app.resultParaArr = result.paraArr;
-        }else{
-          GBP.VIEW.app.resultMemberArr = null;
-        }
-      }
-    }else if(
+    if (code !== null) GBP.MODEL.updateResultFromCode(code);
+    else if (
       window.localStorage.getItem("girlsBandParty_autoParty_cards") !== null){
       const data = GBP.MODEL.readOldStorage();
       for(let [key, value] of data){ //旧ストレージからの情報は配列のみ反映
         value.forEach((v, idx) => GBP.VIEW.app[key][idx] = v);
       }
     }
+    GBP.VIEW.app.onload = true;
   };
 
   let loadStuckNum = 2;
@@ -724,14 +734,8 @@ window.onload = function(){
     }
     GBP.VIEW.app.memberAvailableArr = memberAvailableArr;
     GBP.VIEW.app.memberLevelArr = memberLevelArr;
-    if(--loadStuckNum == 0){
-      try{
-        onloadEvent();
-      }catch(e){
-        console.log(e);
-      }
-      GBP.VIEW.app.onload = true;
-    }
+    if(--loadStuckNum == 0)
+      onloadEvent();
   });
   xhrMember.open("GET", "./data/members.json");
   xhrMember.send();
@@ -748,10 +752,8 @@ window.onload = function(){
     }
     GBP.VIEW.app.itemAvailableArr = itemAvailableArr;
     GBP.VIEW.app.itemLevelArr = itemLevelArr;
-    if(--loadStuckNum == 0){
+    if(--loadStuckNum == 0)
       onloadEvent();
-      GBP.VIEW.app.onload = true;
-    }
   });
   xhrItem.open("GET", "./data/items.json");
   xhrItem.send();
