@@ -624,7 +624,6 @@ GBP.VIEW.init = function(){
   para.methods.powerListStyle = function(idx){
     let color = this.baseColor;
     if(idx < 3) color = this.powerDetailColorArr[idx];
-    if(idx == 4) color = "White";
     return {color: color};
   };
 
