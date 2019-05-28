@@ -21,7 +21,7 @@ for row in data_matrix:
   data_arr.append({
     'id': int(row[0]),
     'name': row[1],
-    'character': row[2],
+    'character': int(row[2]),
     'rarity': int(row[3]) - 1,
     'type': int(row[4]),
     'parameters': [int(value) for value in row[5:8]],
