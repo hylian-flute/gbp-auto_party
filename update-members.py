@@ -36,4 +36,6 @@ with FTP('users602.lolipop.jp') as ftp:
   ftp.login('main.jp-charines', getpass.getpass('FTP Password: '))
   with open('./data/members.json', 'rb') as f:
     ftp.storbinary('STOR ./girls-band-party/auto-party-v2/data/members.json', f)
+  with open('./help.html', 'rb') as f:
+    ftp.storbinary('STOR ./girls-band-party/auto-party-v2/help.html', f)
 
