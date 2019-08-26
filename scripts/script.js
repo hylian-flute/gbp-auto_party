@@ -7,80 +7,71 @@ GBP.DATA.musicTime = 101;
 
 // アイテムの全探索は困難なためヒューリスティックなパターンから選択する
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
-GBP.MODEL.generateItemsPatterns = function(items){
-  // patterns = [ポピパ*パワフル, ポピパ*クール, ..., ハロハピ*ハッピー]
-  let patterns = [];
-  for(let i = 0; i < 20; i++)
-    patterns.push([]);
-
-  // 各属性アイテムを使うか全属性アイテムを使うか記録する
-  let area11 = [null, null, null, null];
-  let area13 = [null, null, null, null];
-
-  // 楽器をパターンに入れ、各タイプの有効なアイテムを選定する
-  items.forEach(item => {
-    // 楽器
-    if(item.id < 35){
-      for(let typeIdx = 0; typeIdx < 4; ++typeIdx){
-        patterns[4*(item.id%5) + typeIdx].push(item);
+GBP.MODEL.generateItemsPatterns = function(items) {
+  // 各バンド, タイプ, パラメータの偏りを持つ典型的なメンバー一覧
+  const modelMemberArr = [];
+  for (let band = 0; band < 5; ++band) {
+    for (let type = 0; type < 4; ++type) {
+      for (let para = 0; para < 3; ++para) {
+        const m = {
+          character: 5 * band,
+          type: type,
+          parameters: [1000, 1000, 1000],
+          paraSum: 4000,
+        };
+        m.parameters[para] = 2000
+        modelMemberArr.push(m);
       }
-    // ヤシの木〜ミッシェルの銅像
-    }else if(item.id < 39){
-      area11[item.id - 35] = item;
-    // 盆栽セット
-    }else if(item.id == 39){
-      for(let typeIdx = 0; typeIdx < 4; ++typeIdx){
-        if(area11[typeIdx] === null ||
-          area11[typeIdx].paraUpRate < item.paraUpRate){
-          area11[typeIdx] = item;
+    }
+  }
+
+  const patterns = [];
+  // 典型的なメンバーごとに最適なアイテムセットを計算する
+  modelMemberArr.map(modelMember => {
+    // エリアをキーに持つアイテムのマップ
+    const itemMap = new Map();
+    const bonusMap = new Map();
+
+    items.forEach(item => {
+      const area = item.area;
+      const bonus = GBP.MODEL.calcItemBonus(modelMember, item);
+      if (! itemMap.has(area)) {
+        itemMap.set(area, item);
+        bonusMap.set(area, bonus);
+      } else {
+        if (bonus > bonusMap.get(area)) {
+          itemMap.set(area, item);
+          bonusMap.set(area, bonus);
         }
       }
-    // ミートソース〜マカロンタワー
-    }else if(item.id < 44){
-      area13[item.id - 40] = item;
-    // チョココロネ, コーヒー
-    }else{
-      for(let typeIdx = 0; typeIdx < 4; ++typeIdx){
-        if(area13[typeIdx] === null ||
-          area13[typeIdx].paraUpRate < item.paraUpRate){
-          area13[typeIdx] = item;
-        }
-      }
-    }
+    });
+    patterns.push([...itemMap.values()]);
   });
-
-  // 各タイプのアイテムをパターンに入れる
-  area11.forEach((item, i) => {
-    if(item == null)
-      return;
-    for(let patternIdx = i; patternIdx < 20; patternIdx += 4){
-      patterns[patternIdx].push(item);
-    }
-  });
-  area13.forEach((item, i) => {
-    if(item == null)
-      return;
-    for(let patternIdx = i; patternIdx < 20; patternIdx += 4){
-      patterns[patternIdx].push(item);
-    }
-  });
-
+  patterns.forEach(pat => console.log(
+    pat.map(it => GBP.DATA.itemArr[it.id].name)
+  ));
   return patterns;
-}
+};
+
+// メンバーとアイテムからボーナスの加算分を計算する
+GBP.MODEL.calcItemBonus = function (member, item) {
+  // 条件を満たさなければ終了
+  // アイテムのnullの項目は無条件にボーナスが適用される
+  if(item.characters !== null &&
+    item.characters.indexOf(member.character) == -1){
+    return 0;
+  }
+  if(item.type !== null && item.type != member.type)
+    return 0;
+
+  if (item.parameter === null) return member.paraSum * item.paraUpRate;
+  else return member.parameters[item.parameter] * item.paraUpRate;
+};
 
 // アイテムとイベント情報からメンバーのパラメータボーナスを計算する
 GBP.MODEL.calcBonus = function(member, items, eventBonus){
   member.itemBonus = items.reduce((bonus, item) => {
-    // 条件を満たさなければ終了
-    // アイテムのnullの項目は無条件にボーナスが適用される
-    if(item.characters !== null &&
-      item.characters.indexOf(member.character) == -1){
-      return bonus;
-    }
-    if(item.type !== null && item.type != member.type)
-      return bonus;
-
-    return bonus + member.paraSum*item.paraUpRate;
+    return bonus + GBP.MODEL.calcItemBonus(member, item);
   }, 0);
   member.itemBonus = Math.round(member.itemBonus);
   
@@ -224,6 +215,7 @@ GBP.MODEL.optimizeMembersAndItems =
     obj.area = item.area;
     obj.characters = item.characters;
     obj.type = item.type;
+    obj.parameter = item.parameter;
     obj.paraUpRate = item.paraUpRateArr[itemsLevels[item.id]];
     return obj;
   });
@@ -595,6 +587,8 @@ GBP.VIEW.init = function(){
       return this.buttonLabelStyle(available, "type", item.type);
     else if(item.characters !== null)
       return this.buttonLabelStyle(available, "band", item.characters[0]/5);
+    else if(item.parameter !== null)
+      return this.buttonLabelStyle(available, "para", item.parameter);
 
     return this.buttonLabelStyle(available);
   };
