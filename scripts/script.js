@@ -70,6 +70,7 @@ GBP.MODEL.calcItemBonus = function (member, item) {
 
 // アイテムとイベント情報からメンバーのパラメータボーナスを計算する
 GBP.MODEL.calcBonus = function(member, items, eventBonus){
+  // アイテムボーナス 
   member.itemBonus = items.reduce((bonus, item) => {
     return bonus + GBP.MODEL.calcItemBonus(member, item);
   }, 0);
@@ -79,11 +80,11 @@ GBP.MODEL.calcBonus = function(member, items, eventBonus){
   member.eventBonus = 0;
   let applyCount = 0;
   if(eventBonus.members !== null && eventBonus.members[member.character]){
-    member.eventBonus += member.paraSum*0.1;
+    member.eventBonus += member.paraSum*0.2;
     ++applyCount;
   }
   if(eventBonus.type !== null && eventBonus.type == member.type){
-    member.eventBonus += member.paraSum*0.2;
+    member.eventBonus += member.paraSum*0.1;
     ++applyCount;
   }
   if(eventBonus.parameter !== null && applyCount >= 2)
