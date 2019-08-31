@@ -47,9 +47,6 @@ GBP.MODEL.generateItemsPatterns = function(items) {
     });
     patterns.push([...itemMap.values()]);
   });
-  patterns.forEach(pat => console.log(
-    pat.map(it => GBP.DATA.itemArr[it.id].name)
-  ));
   return patterns;
 };
 
@@ -470,6 +467,7 @@ GBP.VIEW.init = function(){
     "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲"
   ];
   para.data.paraNameArr = ["パフォーマンス", "テクニック", "ビジュアル"];
+  para.data.paraShortNameArr = ["パフォ", "テク", "ビジュ"];
   para.data.paraColorArr = ["#ff0053", "#00a3ff", "#ffa300"];
   para.data.paraLightColorArr = ["#ffbcd4", "#bce8ff", "#ffe8bc"];
   para.data.powerDetailNameArr = ["バンドパラメータ",
@@ -603,6 +601,8 @@ GBP.VIEW.init = function(){
       target = this.typeNameArr[item.type];
     else if(item.characters !== null)
       target = this.bandNameArr[item.characters[0]/5];
+    else if(item.parameter !== null)
+      target = this.paraShortNameArr[item.parameter];
     let rate = "" + Math.round(item.paraUpRateArr[level]*1000);
     rate = rate.slice(0, -1) + "." + rate.slice(-1);
     if(rate[0] == ".")

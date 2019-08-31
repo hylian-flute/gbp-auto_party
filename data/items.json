@@ -45,14 +45,14 @@
   {"id":43,"name":"マカロンタワー","area":13,"characters":null,"type":3,"parameter":null,"paraUpRateArr":[0.02,0.04,0.06,0.08,0.1,0.12]},
   {"id":44,"name":"チョココロネ","area":13,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
   {"id":45,"name":"極上コーヒー","area":13,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
-  {"id":46,"name":"映画雑誌","area":8,"characters":null,"type":null,"parameter":0,"paraUpRateArr":[0.06,0.08,0.1,0.12,0.14,0.16]},
-  {"id":47,"name":"音楽雑誌","area":8,"characters":null,"type":null,"parameter":1,"paraUpRateArr":[0.06,0.08,0.1,0.12,0.14,0.16]},
-  {"id":48,"name":"ファッション雑誌","area":8,"characters":null,"type":null,"parameter":2,"paraUpRateArr":[0.06,0.08,0.1,0.12,0.14,0.16]},
+  {"id":46,"name":"映画雑誌","area":8,"characters":null,"type":null,"parameter":0,"paraUpRateArr":[0.08,0.1,0.12,0.14,0.16]},
+  {"id":47,"name":"音楽雑誌","area":8,"characters":null,"type":null,"parameter":1,"paraUpRateArr":[0.08,0.1,0.12,0.14,0.16]},
+  {"id":48,"name":"ファッション雑誌","area":8,"characters":null,"type":null,"parameter":2,"paraUpRateArr":[0.08,0.1,0.12,0.14,0.16]},
   {"id":49,"name":"CiRCLEのポスター","area":5,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.03,0.035,0.04,0.045,0.05,0.055]},
   {"id":50,"name":"CiRCLEのフライヤー","area":9,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.03,0.035,0.04,0.045,0.05,0.055]},
-  {"id":51,"name":"みんなのマイク","area":0,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
-  {"id":52,"name":"みんなのギター","area":1,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
-  {"id":53,"name":"みんなのベース","area":2,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
-  {"id":54,"name":"みんなのドラム","area":3,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]},
-  {"id":55,"name":"みんなのキーボード","area":4,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.005,0.01,0.015,0.02,0.025]}
+  {"id":51,"name":"みんなのマイク","area":0,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
+  {"id":52,"name":"みんなのギター","area":1,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
+  {"id":53,"name":"みんなのベース","area":2,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
+  {"id":54,"name":"みんなのドラム","area":3,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
+  {"id":55,"name":"みんなのキーボード","area":4,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]}
 ]
