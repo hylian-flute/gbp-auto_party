@@ -84,8 +84,13 @@ GBP.MODEL.calcBonus = function(member, items, eventBonus){
     member.eventBonus += member.paraSum*0.1;
     ++applyCount;
   }
+
+  // キャラ, タイプ両方一致ボーナス
   if(eventBonus.parameter !== null && applyCount >= 2)
-    member.eventBonus += member.parameters[eventBonus.parameter]*0.5;
+    member.eventBonus += (
+      member.parameters[eventBonus.parameter]*0.5 + member.paraSum*0.2;
+    );
+
   member.eventBonus = Math.round(member.eventBonus);
 
   member.paraInclBonus = member.paraSum + member.itemBonus + member.eventBonus;
