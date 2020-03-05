@@ -9,44 +9,38 @@ GBP.DATA.musicTime = 101;
 // バンド特化*タイプ特化, 盆栽セット等はタイプ特化のレベルが低いときのみ
 GBP.MODEL.generateItemsPatterns = function(items) {
   // 各バンド, タイプ, パラメータの偏りを持つ典型的なメンバー一覧
-  const modelMemberArr = [];
+  const patterns = [];
   for (let band = 0; band < 6; ++band) {
     for (let type = 0; type < 4; ++type) {
       for (let para = 0; para < 3; ++para) {
-        const m = {
+        const modelMember = {
           character: 5 * band,
           type: type,
           parameters: [1000, 1000, 1000],
           paraSum: 4000,
         };
-        m.parameters[para] = 2000
-        modelMemberArr.push(m);
+        modelMember.parameters[para] = 2000
+
+        // エリアをキーに持つアイテムのマップ
+        const itemMap = new Map();
+        const bonusMap = new Map();
+
+        // 典型的なメンバーごとに最適なアイテムセットを計算する
+        items.forEach(item => {
+          const area = item.area;
+          const bonus = GBP.MODEL.calcItemBonus(modelMember, item);
+          if (! itemMap.has(area)) {
+            itemMap.set(area, item);
+            bonusMap.set(area, bonus);
+          } else if (bonus > bonusMap.get(area)) {
+            itemMap.set(area, item);
+            bonusMap.set(area, bonus);
+          }
+        });
+        patterns.push({items: [...itemMap.values()], band: band, type: type});
       }
     }
   }
-
-  const patterns = [];
-  // 典型的なメンバーごとに最適なアイテムセットを計算する
-  modelMemberArr.map(modelMember => {
-    // エリアをキーに持つアイテムのマップ
-    const itemMap = new Map();
-    const bonusMap = new Map();
-
-    items.forEach(item => {
-      const area = item.area;
-      const bonus = GBP.MODEL.calcItemBonus(modelMember, item);
-      if (! itemMap.has(area)) {
-        itemMap.set(area, item);
-        bonusMap.set(area, bonus);
-      } else {
-        if (bonus > bonusMap.get(area)) {
-          itemMap.set(area, item);
-          bonusMap.set(area, bonus);
-        }
-      }
-    });
-    patterns.push([...itemMap.values()]);
-  });
   return patterns;
 };
 
@@ -177,54 +171,59 @@ GBP.MODEL.calcTotalPara = function(partyArr){
 // アイテムを固定してメンバーを最適化する
 // membersはスキル時間*スキル倍率で降順ソート済み
 // itemsは所持アイテムではなく固定された使用アイテム
-GBP.MODEL.optimizeMembers = function(members, items, eventBonus){
+GBP.MODEL.optimizeMembers = function(members, ip, eventBonus){
   // メンバーにボーナス値を追加する
   members = members.map(
-    member => GBP.MODEL.calcBonus(member, items, eventBonus));
+    member => GBP.MODEL.calcBonus(member, ip.items, eventBonus)
+  ).sort((a, b) => b.paraInclBonus - a.paraInclBonus);
 
-  // 上位互換の同キャラが1枚もしくは5キャラがいるメンバーを除外
-  console.log(`Bef: ${members.length}`);
-  // members = members.filter((targetMember, targetIdx) => {
-  //   let charaMask = (new Array(30)).fill(false);
+  let sameBandMembers = members.filter(
+    m => (Math.floor(m.character / 5) === ip.band)
+  );
+  let sameTypeMembers = members.filter( m => (m.type === ip.type));
 
-  //   for(let superiorIdx = 0; superiorIdx < targetIdx; ++superiorIdx){
-  //     if(
-  //       members[superiorIdx].paraInclBonus >= targetMember.paraInclBonus &&
-  //       members[superiorIdx].scoreUpRateHigh >= targetMember.scoreUpRateHigh
-  //     ) {
-  //       charaMask[members[superiorIdx].character] = true;
-  //     }
-  //   }
-  //   return (!charaMask[targetMember.character] &&
-  //     charaMask.reduce((n, b) => n + (b ? 1 : 0), 0) < 5)
-  // });
-  members = members.filter((targetMember, targetIdx) => {
-    for(let superiorIdx = 0; superiorIdx < targetIdx; ++superiorIdx){
-      if(
-        members[superiorIdx].character === targetMember.character && 
-        members[superiorIdx].paraInclBonus >= targetMember.paraInclBonus &&
-        members[superiorIdx].scoreUpRateHigh >= targetMember.scoreUpRateHigh
-      ) {
-        return false;
+  const generateMemberFilter = same => {
+    const calcScoreUpRate = member => (
+      same === member.highCondition ?
+        member.mulScoreUpHigh :
+        member.mulScoreUp
+    );
+    const memberFilter = (member, idx, members) => {
+      const scoreUpRate = calcScoreUpRate(member);
+      const charaSet = new Set();
+      for (let i = 0; i < idx; ++i) {
+        if (calcScoreUpRate(members[i]) >= scoreUpRate) {
+          if (members[i].character === member.character) return false;
+          else {
+            charaSet.add(members[i].character);
+            if (charaSet.size >= 5) return false;
+          }
+        }
       }
+      return true;
     }
-    return true;
-  });
-  console.log(`Aft: ${members.length}`);
+    return memberFilter;
+  }
+  members = members.filter(generateMemberFilter(0));
+  sameBandMembers = sameBandMembers.filter(generateMemberFilter(1));
+  sameTypeMembers = sameTypeMembers.filter(generateMemberFilter(2));
 
   let maxResult = {total: 0};
   let maxPartyArr = null;
-  GBP.MODEL.combination(members, 5, partyArr => {
-    const result = GBP.MODEL.calcTotalPara(partyArr);
-    if(result !== null){
-      if(result.total > maxResult.total){
-        maxResult = result;
-        [partyArr[0], partyArr[result.leader]] = (
-          [partyArr[result.leader], partyArr[0]]
-        );
-        maxPartyArr = partyArr;
+  [members, sameBandMembers, sameTypeMembers].forEach(arr => {
+    if (arr.length <= 5) return;
+    GBP.MODEL.combination(arr, 5, partyArr => {
+      const result = GBP.MODEL.calcTotalPara(partyArr);
+      if(result !== null){
+        if(result.total > maxResult.total){
+          maxResult = result;
+          [partyArr[0], partyArr[result.leader]] = (
+            [partyArr[result.leader], partyArr[0]]
+          );
+          maxPartyArr = partyArr;
+        }
       }
-    }
+    });
   });
   return {parameters: maxResult, partyArr: maxPartyArr}
 };
@@ -251,7 +250,7 @@ GBP.MODEL.optimizeMembersAndItems =
       member.scoreUpTimeArr[membersLevels[member.id]],
     mulScoreUpHigh: member.scoreUpRateHigh *
       member.scoreUpTimeArr[membersLevels[member.id]],
-  })).sort((a, b) => b.mulScoreUp - a.mulScoreUp);
+  }));
 
   //5キャラ以上所持しているか確認
   let charaCountArr = (new Array(30)).fill(false);
@@ -282,7 +281,7 @@ GBP.MODEL.optimizeMembersAndItems =
     const result = GBP.MODEL.optimizeMembers(members, ip, eventBonus);
     if(maxResult === null ||
       result.parameters.total > maxResult.parameters.total){
-      result.items = ip;
+      result.items = ip.items;
       maxResult = result;
     }
   }));
