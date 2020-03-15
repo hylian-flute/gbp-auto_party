@@ -23,7 +23,7 @@
         @change="i==3 ? pressResult() : null">
       {{tab}}
     </label>
-    <input type="button" value="入力状態を保存" @click="saveInput">
+    <input type="button" value="入力状態を保存" disabled>
   </nav>
   <div v-if="!onload">読み込み中...</div>
   <div v-if="onload && tabOption == 0">
@@ -94,6 +94,7 @@
             v-model="memberLevelArr[member.id]">
         </div>
         <div>{{skillExplain(member)}}</div>
+        <div>{{skillCondition(member)}}</div>
       </label>
     </div>
   </div>
@@ -168,6 +169,7 @@
         </div>
         <div>総合力&ensp;{{member.parameters.reduce((s, p) => s + p, 0)}}</div>
         <div>{{skillExplain(member)}}</div>
+        <div>{{skillCondition(member)}}</div>
         <div v-if="i == 0" class="leader-div">リーダー</div>
       </div>
     </div>
