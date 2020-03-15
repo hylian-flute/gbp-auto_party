@@ -415,8 +415,13 @@ GBP.MODEL.decode = function(code){
   p += 2;
   map.set("typeRefineArr", readBoolArr(binCodeArr[0], p, 4));
   p += 4;
-  map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 6));
-  p += 6;
+  if (version === 0) {
+    map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 5));
+    p += 5;
+  } else {
+    map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 6));
+    p += 6;
+  }
   map.set("skillRefineArr", readBoolArr(binCodeArr[0], p, 3));
   p += 3;
   map.set("rarityRefineArr", readBoolArr(binCodeArr[0], p, 4));
