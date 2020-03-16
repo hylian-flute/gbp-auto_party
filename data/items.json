@@ -54,5 +54,12 @@
   {"id":52,"name":"みんなのギター","area":1,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
   {"id":53,"name":"みんなのベース","area":2,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
   {"id":54,"name":"みんなのドラム","area":3,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
-  {"id":55,"name":"みんなのキーボード","area":4,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]}
+  {"id":55,"name":"みんなのキーボード","area":4,"characters":null,"type":null,"parameter":null,"paraUpRateArr":[0.01,0.0125,0.015,0.0175,0.02,0.0225]},
+  {"id":56,"name":"シンフォニーマイク","area":0,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.02,0.025,0.03,0.035,0.04,0.045]},
+  {"id":57,"name":"透子のギター","area":1,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.02,0.025,0.03,0.035,0.04,0.045]},
+  {"id":58,"name":"七深のベース","area":2,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.02,0.025,0.03,0.035,0.04,0.045]},
+  {"id":59,"name":"つくしのドラム","area":3,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.02,0.025,0.03,0.035,0.04,0.045]},
+  {"id":60,"name":"瑠唯のバイオリン","area":4,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.02,0.025,0.03,0.035,0.04,0.045]},
+  {"id":61,"name":"モニカのポスター","area":5,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.06,0.07,0.08,0.09,0.1,0.11]},
+  {"id":62,"name":"モニカのフライヤー","area":9,"characters":[25,26,27,28,29],"type":null,"parameter":null,"paraUpRateArr":[0.06,0.07,0.08,0.09,0.1,0.11]}
 ]

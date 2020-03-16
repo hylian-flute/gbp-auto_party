@@ -517,7 +517,7 @@ GBP.VIEW.init = function(){
   para.data.typeColorArr = ["#ff345a", "#4057e3", "#44c527", "#ff8400"];
   para.data.typeLightColorArr = ["#ffccd6", "#cfd5f8", "#d0f1c9", "#ffe0bf"];
   para.data.bandNameArr =
-    ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ", "Morfonica"];
+    ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ", "モニカ"];
   para.data.bandColorArr = 
     ["#f96947", "#0a0a10", "#ff2699", "#6870ec", "#ffde5d", "#32a9fe"];
   para.data.bandLightColorArr =
