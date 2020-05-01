@@ -211,7 +211,7 @@ GBP.MODEL.optimizeMembers = function(members, ip, eventBonus){
   let maxResult = {total: 0};
   let maxPartyArr = null;
   [members, sameBandMembers, sameTypeMembers].forEach(arr => {
-    if (arr.length <= 5) return;
+    if (arr.length < 5) return;
     GBP.MODEL.combination(arr, 5, partyArr => {
       const result = GBP.MODEL.calcTotalPara(partyArr);
       if(result !== null){
