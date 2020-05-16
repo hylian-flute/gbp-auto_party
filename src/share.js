@@ -76,6 +76,13 @@ const AutoParty = {};
       }
       return this.scoreUpTimeArr[skillLevel - 1];
     }
+
+    static create(obj) {
+      const member = Object.create(this.prototype);
+      for (const key in obj) member[key] = obj[key];
+      member.checkModel();
+      return member;
+    }
   };
 
   AutoParty.Item = class {
@@ -120,6 +127,7 @@ const AutoParty = {};
         return `${prefix}${kind}${value}`;
       })();
     }
+
     checkModel() {
       if (!(
         typeof this.model.available === "boolean"
@@ -129,6 +137,7 @@ const AutoParty = {};
         throw new Error(`Item.constructor: 不正なプロパティ（${this.name}）`);
       }
     }
+
     get paraUpRate() {
       const level = parseInt(this.model.level);
       if (Number.isNaN(level) || level <= 0 || level > this.paraUpRateArr.length) {
@@ -142,6 +151,13 @@ const AutoParty = {};
         && (this.type === null || type === this.type)
         && (this.parameter === null || parameter === this.parameter)
       );
+    }
+
+    static create(obj) {
+      const item = Object.create(this.prototype);
+      for (const key in obj) item[key] = obj[key];
+      item.checkModel();
+      return item;
     }
   };
 }

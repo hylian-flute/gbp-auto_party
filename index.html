@@ -5,15 +5,17 @@
 <script src="./src/share.js"></script>
 <script src="./src/main.js"></script>
 
-<div id="app">
-  <header class="flex">
-    <h1><a href="./">[ガルパ]&nbsp;編成・エリアアイテム最適化ツール</a></h1>
-    <a href="javascript:void(0);">ヘルプ</a>
-  </header>
+<header class="flex">
+  <h1><a href="./">[ガルパ]&nbsp;編成・エリアアイテム最適化ツール</a></h1>
+  <a href="./help.html">ヘルプ</a>
+  <a href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-show-count="false">Tweet</a>
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</header>
 
+<div id="app">
   <div class="flex">
-    <label v-for="(tab, i) in tabs" :key="i"
-      class="panel color-other width-small" :class="{checked: model.tab === i}">
+    <label v-for="(tab, i) in tabs" :key="i" @change="onchangeTab"
+      class="panel color-other width-xsmall" :class="{checked: model.tab === i}">
 
       <input type="radio" v-model="model.tab" name="tab" :value="i">
       <span>{{tab}}</span>
@@ -27,7 +29,7 @@
 
       <div class="flex">
         <div>タイプ</div>
-        <label v-for="(type, i) in types" :key="i" class="panel width-small"
+        <label v-for="(type, i) in types" :key="i" class="panel width-xsmall"
           :class="[`color-type${i}`, model.filterTypes[i] ? 'checked' : '']">
 
           <input type="checkbox" v-model="model.filterTypes[i]">
@@ -37,7 +39,7 @@
 
       <div class="flex">
         <div>バンド</div>
-        <label v-for="(band, i) in bands.slice(0, 4)" :key="i" class="panel width-small"
+        <label v-for="(band, i) in bands.slice(0, 4)" :key="i" class="panel width-xsmall"
           :class="[`color-band${i}`, model.filterBands[i] ? 'checked' : '']">
 
           <input type="checkbox" v-model="model.filterBands[i]">
@@ -46,7 +48,7 @@
       </div>
       <div class="flex">
         <div></div>
-        <label v-for="(band, i) in bands.slice(4)" :key="i + 4" class="panel width-small"
+        <label v-for="(band, i) in bands.slice(4)" :key="i + 4" class="panel width-xsmall"
           :class="[`color-band${i + 4}`, model.filterBands[i + 4] ? 'checked' : '']">
 
           <input type="checkbox" v-model="model.filterBands[i + 4]">
@@ -57,7 +59,7 @@
       <div class="flex">
         <div>スキル</div>
         <label v-for="(skill, i) in skills" :key="i" class="panel color-other"
-          :class="[model.filterSkills[i] ? 'checked' : '', i === 0 ? 'width-large' : 'width-small']">
+          :class="[model.filterSkills[i] ? 'checked' : '', i === 0 ? 'width-large' : 'width-xsmall']">
           <input type="checkbox" v-model="model.filterSkills[i]">
           <span>{{skill}}</span>
         </label>
@@ -65,7 +67,7 @@
 
       <div class="flex">
         <div>レアリティ</div>
-        <label v-for="(rarity, i) in rarities" :key="i" class="panel color-other width-small"
+        <label v-for="(rarity, i) in rarities" :key="i" class="panel color-other width-xsmall"
           :class="{checked: model.filterRarities[i]}">
 
           <input type="checkbox" v-model="model.filterRarities[i]">
@@ -75,7 +77,7 @@
 
       <div class="flex">
         <div>ソート順</div>
-        <label v-for="(sort, i) in sorts" :key="i" class="panel color-other width-small"
+        <label v-for="(sort, i) in sorts" :key="i" class="panel color-other width-xsmall"
           :class="{checked: model.sort === i}">
 
           <input type="radio" v-model="model.sort" name="sort" :value="i">
@@ -144,22 +146,86 @@
   </div>
 
   <div v-else-if="model.tab === 2">
-    <div v-for="(type, i) in eventTypes" :key="`ET${i}`">
-      <input type="radio" v-model="event.type" name="event-type" :value="i">
-      <span>{{type}}</span>
+    <h2>タイプボーナス</h2>
+    <div class="flex">
+      <label v-for="(type, i) in eventTypes" :key="i" class="panel width-xsmall"
+        :class="[types.includes(type) ? `color-type${i}` : 'color-other', event.type === i ? 'checked' : '']">
+
+        <input type="radio" v-model="event.type" name="event-type" :value="i">
+        <span>{{type}}</span>
+      </label>
     </div>
 
-    <div v-for="(character, i) in characters" :key="`EC${i}`">
-      <input type="checkbox" v-model="event.characters[i]">
-      <span>{{character}}</span>
+    <h2>キャラクターボーナス</h2>
+    <div v-for="(band, bandIdx) in bands" :key="bandIdx" class="flex">
+      <label v-for="(character, i) in characters.slice(5 * bandIdx, 5 * (bandIdx + 1))"
+        :key="i" class="panel width-xsmall"
+        :class="[`color-band${bandIdx}`, event.characters[5 * bandIdx + i] ? 'checked' : '']">
+
+        <input type="checkbox" v-model="event.characters[5 * bandIdx + i]" name="event-character" :value="i">
+        <span>{{character}}</span>
+      </label>
     </div>
 
-    <div v-for="(parameter, i) in parameters" :key="`EP${i}`">
-      <input type="radio" v-model="event.parameter" name="event-parameter" :value="i">
-      <span>{{parameter, "なし"}}</span>
+    <h2>両方一致ボーナス</h2>
+    <div class="flex">
+      <label v-for="(parameter, i) in parameters" :key="i" class="panel width-small"
+        :class="[`color-parameter${i}`, event.parameter === i ? 'checked' : '']">
+
+        <input type="radio" v-model="event.parameter" name="event-parameter" :value="i">
+        <span>{{parameter}}</span>
+      </label>
     </div>
   </div>
 
+  <div v-else>
+    <div v-if="typeof result === 'number'">
+      <span>計算中...</span>
+      <progress :value="result"></progress>
+    </div>
 
-  <button @click="calculate">計算</button>
+    <div v-else-if="Array.isArray(result.members)">
+      <h2>メンバー</h2>
+      <div class="flex">
+        <label v-for="(member, i) in result.members" :key="member.id" class="panel center width-medium"
+          :class="[`color-type${member.type}`, 'checked']">
+
+          <div>{{member.name}}</div>
+          <div>{{rarities[member.rarity]}}&nbsp;{{characters[member.character]}}</div>
+          <div>総合力&nbsp;{{member.totalParameter}}</div>
+          <div>
+            {{formatNum(member.scoreUpTime, 1)}}秒間
+            {{formatNum(100 * member.scoreUpRate, 0)}}%UP
+          </div>
+          <div :class="{hidden: member.highCondition === 0}">
+            同{{["", "バンド", "タイプ"][member.highCondition]}}で
+            {{formatNum(100 * member.scoreUpRateHigh, 0)}}%UP
+          </div>
+          <b v-if="i === 0">リーダー</b>
+        </label>
+      </div>
+
+      <h2>エリアアイテム</h2>
+      <div class="flex">
+        <label v-for="item in result.items" :key="item.id" class="panel center width-medium"
+          :class="[item.colorClass, 'checked']">
+
+          <div>{{item.name}}</div>
+          <div>{{getTarget(item)}}&nbsp;{{formatNum(100 * item.paraUpRate, 1)}}%UP</div>
+        </label>
+      </div>
+
+      <h2>総合力詳細</h2>
+      <table class="result">
+        <tr><td class="result-detail color-band">バンドパラメータ</td><td>{{result.bandParameter}}</td></tr>
+        <tr><td class="result-detail color-item">エリアアイテムボーナス</td><td>{{formatNum(result.itemBonus, 0)}}</td></tr>
+        <tr><td class="result-detail color-event">編成ボーナス</td><td>{{formatNum(result.eventBonus, 0)}}</td></tr>
+        <tr><td class="result-detail">スキル期待値</td><td>{{formatNum(result.skillPower, 0)}}</td></tr>
+        <tr><td class="result-detail"><b>合計</b></td><td><b>{{formatNum(result.total, 0)}}</b></td></tr>
+      </table>
+    </div>
+
+    <div v-else>
+    </div>
+  </div>
 </div>

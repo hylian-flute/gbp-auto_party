@@ -1,20 +1,6 @@
 "use strict";
 
 addEventListener("load", () => {
-  const worker = new Worker("./src/worker.js");
-  let workerProgress = 0;
-  worker.addEventListener("message", message => {
-    if (typeof message.data === "number") {
-      workerProgress += message.data;
-      console.log(`${Math.floor(100 * workerProgress)}%`);
-    } else {
-      console.dir(message.data);
-    }
-  });
-  worker.addEventListener("error", err => {
-    alert(err.message);
-  });
-
   const types = ["パワフル", "クール", "ピュア", "ハッピー"];
 
   const data = {
@@ -57,12 +43,35 @@ addEventListener("load", () => {
       type: Math.floor(5 * Math.random()),
       characters: [...new Array(AutoParty.CHARACTER_NUM)].map(_ => Math.random() < 1 / 6),
       parameter: Math.floor(3 * Math.random()),
-    }
+    },
+    result: [],
   };
 
+  const worker = new Worker("./src/worker.js");
+  worker.addEventListener("message", message => {
+    if (typeof message.data === "number") {
+      data.result += message.data;
+    } else {
+      console.log(message.data);
+      data.result = message.data;
+      data.result.members = data.result.members.map(
+        member => AutoParty.Member.create(member)
+      );
+      data.result.items = data.result.items.map(
+        item => AutoParty.Item.create(item)
+      );
+    }
+  });
+  worker.addEventListener("error", err => {
+    alert(err.message);
+    data.result = [];
+  });
+
+
   const methods = {
-    calculate: function() {
-      workerProgress = 0;
+    onchangeTab: function(e) {
+      if (e.target.value !== "3") return;
+      this.result = 0;
       worker.postMessage({
         members: this.members.filter(member => member.model.available),
         items: this.items.filter(item => item.model.available),

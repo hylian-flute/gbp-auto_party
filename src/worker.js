@@ -48,18 +48,12 @@ const Event = class {
 }
 
 addEventListener("message", message => {
-  const members = message.data.members.map(member => {
-    const obj = Object.create(AutoParty.Member.prototype);
-    for (const key in member) obj[key] = member[key];
-    obj.checkModel();
-    return obj;
-  });
-  const items = message.data.items.map(item => {
-    const obj = Object.create(AutoParty.Item.prototype);
-    for (const key in item) obj[key] = item[key];
-    obj.checkModel();
-    return obj;
-  });
+  const members = message.data.members.map(
+    member => AutoParty.Member.create(member)
+  );
+  const items = message.data.items.map(item => 
+    AutoParty.Item.create(item)
+  );
   const event = new Event(message.data.event);
 
   const areas = [...new Array(14)].map(v => []);
@@ -97,17 +91,24 @@ addEventListener("message", message => {
     const isEventCharacter = event.characters.has(member.character);
     const isEventType = (event.type === member.type);
     const isEventBoth = isEventCharacter && isEventType;
-    return member.totalParameter
-      * (1
-        + (member.band === itemSet.band ? itemSet.bandRate : 0)
-        + (member.type === itemSet.type ? itemSet.typeRate : 0)
-        + itemSet.anyRate
-        + (isEventCharacter ? 0.2 : 0)
-        + (isEventType ? 0.1 : 0)
-        + (isEventBoth ? 0.2 : 0)
-      )
-      + member.parameters[itemSet.parameter] * itemSet.parameterRate
-      + (isEventBoth ? 0.5 * member.parameters[event.parameter] : 0);
+
+    const itemBonus = member.totalParameter * (
+      (member.band === itemSet.band ? itemSet.bandRate : 0)
+      + (member.type === itemSet.type ? itemSet.typeRate : 0)
+      + itemSet.anyRate
+    ) + member.parameters[itemSet.parameter] * itemSet.parameterRate;
+
+    const eventBonus = member.totalParameter * (
+      (isEventCharacter ? 0.2 : 0)
+      + (isEventType ? 0.1 : 0)
+      + (isEventBoth ? 0.2 : 0)
+    ) + (isEventBoth ? 0.5 * member.parameters[event.parameter] : 0);
+
+    return {
+      parameter: member.totalParameter + itemBonus + eventBonus,
+      itemBonus: itemBonus,
+      eventBonus: eventBonus,
+    };
   };
 
   const filters = [
@@ -149,7 +150,7 @@ addEventListener("message", message => {
   const result = itemSets.reduce((result, itemSet) => {
     const memberPowers = members.map(member => ({
       member: member,
-      parameter: calcBuffedParameter(member, itemSet),
+      ...calcBuffedParameter(member, itemSet),
     })).sort((a, b) => b.parameter - a.parameter);
 
     let resultOfItemSet = {total: 0};
@@ -198,12 +199,21 @@ addEventListener("message", message => {
         const skillPower = totalParameter * totalSkill / MUSIC_LEN;
         const total = totalParameter + skillPower;
 
-        if (total > result.total) return {
-          total: total,
-          totalParameter: totalParameter,
-          skillPower: skillPower,
-          members: party.map(memberBenefit => memberBenefit.member),
-        };
+        if (total > result.total) {
+          const displayParameters = party.reduce((parameters, memberBenefit) => {
+            parameters.bandParameter += memberBenefit.member.totalParameter;
+            parameters.itemBonus += memberBenefit.itemBonus;
+            parameters.eventBonus += memberBenefit.eventBonus;
+            return parameters;
+          }, {bandParameter: 0, itemBonus: 0, eventBonus: 0});
+          return {
+            total: total,
+            skillPower: skillPower,
+            members: party.map(memberBenefit => memberBenefit.member),
+            items: itemSet,
+            ...displayParameters,
+          };
+        }
         return result;
       }, {total: 0});
 
