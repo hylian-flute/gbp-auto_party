@@ -6,7 +6,7 @@ addEventListener("load", () => {
   const data = {
     tabs: ["メンバー", "アイテム", "イベント", "結果"],
     types: types,
-    bands: ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ", "モニカ"],
+    bands: ["ポピパ", "Afterglow", "パスパレ", "Roselia", "ハロハピ", "モニカ", "RAS"],
     skills: ["条件付きスコアアップ", "スコアアップ", "その他"],
     rarities: ["★", "★★", "★★★", "★★★★"],
     sorts: ["キャラクター", "総合力", "最近の追加"],
@@ -17,6 +17,7 @@ addEventListener("load", () => {
       "湊友希那", "氷川紗夜", "今井リサ", "宇田川あこ", "白金燐子",
       "弦巻こころ", "瀬田薫", "北沢はぐみ", "松原花音", "奥沢美咲",
       "倉田ましろ", "桐ケ谷透子", "広町七深", "二葉つくし", "八潮瑠唯",
+      "レイヤ", "ロック", "マスキング", "パレオ", "チュチュ",
     ],
     eventTypes: [...types, "なし"],
     parameters: ["パフォーマンス", "テクニック", "ビジュアル"],
@@ -29,7 +30,7 @@ addEventListener("load", () => {
     model: {
       tab: 0,
       filterTypes: (new Array(4)).fill(true),
-      filterBands: (new Array(6)).fill(true),
+      filterBands: (new Array(7)).fill(true),
       filterSkills: (new Array(3)).fill(true),
       filterRarities: (new Array(4)).fill(true),
       sort: 0,
@@ -41,7 +42,7 @@ addEventListener("load", () => {
       //characters: (new Array(AutoParty.CHARACTER_NUM)).fill(false),
       //parameter: 3,
       type: Math.floor(5 * Math.random()),
-      characters: [...new Array(AutoParty.CHARACTER_NUM)].map(_ => Math.random() < 1 / 6),
+      characters: [...new Array(AutoParty.CHARACTER_NUM)].map(_ => Math.random() < 1 / 7),
       parameter: Math.floor(3 * Math.random()),
     },
     result: [],
@@ -66,7 +67,6 @@ addEventListener("load", () => {
     alert(err.message);
     data.result = [];
   });
-
 
   const methods = {
     onchangeTab: function(e) {
@@ -124,6 +124,26 @@ addEventListener("load", () => {
       if (kind === "parameter") return this.parameters[value];
       return "全て";
     },
+    encode: function() {
+      return AutoParty.encode(
+        this.model,
+        this.members.map(member => member.model),
+        this.items.map(item => item.model),
+        this.event
+      );
+    },
+    encodeTest: function() {
+      const code = AutoParty.encode(
+        this.model,
+        this.members.map(member => member.model),
+        this.items.map(item => item.model),
+        this.event
+      );
+      console.dir(code);
+      const [model, event] = AutoParty.decode(code);
+      console.dir(model);
+      console.dir(event);
+    }
   };
 
   const computed = {

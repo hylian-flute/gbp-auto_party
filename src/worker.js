@@ -1,6 +1,6 @@
 "use strict";
 
-importScripts("./share.js");
+importScripts("./autoparty.js");
 const MUSIC_LEN = 101;
 const ItemSet = class extends Array {
   constructor(band, type, parameter) {
@@ -77,10 +77,10 @@ addEventListener("message", message => {
     return itemSet;
   };
 
-  //TODO: 「みんなの」系アイテムが最適解になるパターンがある
+  //「みんなの」系アイテムが最適解になるパターンがあるのでbandとtypeは+1
   const itemSets = [];
-  for (let band = 0; band < AutoParty.BAND_NUM; ++band) {
-    for (let type = 0; type < 4; ++type) {
+  for (let band = 0; band < AutoParty.BAND_NUM + 1; ++band) {
+    for (let type = 0; type < 4 + 1; ++type) {
       for (let parameter = 0; parameter < 3; ++parameter) {
         itemSets.push(createItemSet(band, type, parameter));
       }

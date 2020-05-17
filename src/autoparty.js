@@ -10,7 +10,7 @@ const AutoParty = {};
     return (typeof v === "number" && v >= min && v < max);
   };
 
-  AutoParty.CHARACTER_NUM = 30;
+  AutoParty.CHARACTER_NUM = 35;
   AutoParty.BAND_NUM = AutoParty.CHARACTER_NUM / 5;
 
   AutoParty.Member = class {

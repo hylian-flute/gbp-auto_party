@@ -97,7 +97,23 @@
   width: 100px;
 }
 
-.result td:nth-child(2) {
+.result .panel {
+  user-select: auto;
+  cursor: auto;
+}
+
+.leader {
+  text-align: left;
+}
+
+.leader b {
+  color: white;
+  background-color: #fd416f;
+  padding: 0 8px;
+  border-top-left-radius: 4px;
+}
+
+.result-table td:nth-child(2) {
   text-align: right;
 }
 
@@ -114,7 +130,6 @@
 .color-event::before{
   color: #fb93d3;
 }
-
 
 header {
   align-items: baseline;

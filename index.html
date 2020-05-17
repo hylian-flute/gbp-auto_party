@@ -2,7 +2,8 @@
 <meta charset="utf-8">
 <link rel="stylesheet" type="text/css" href="./style.css">
 <script src="./src/vue.js"></script>
-<script src="./src/share.js"></script>
+<script src="./src/autoparty.js"></script>
+<script src="./src/encoder.js"></script>
 <script src="./src/main.js"></script>
 
 <header class="flex">
@@ -20,7 +21,7 @@
       <input type="radio" v-model="model.tab" name="tab" :value="i">
       <span>{{tab}}</span>
     </label>
-    <div><button>入力状態を保存</button></div>
+    <div><button @click="encodeTest">入力状態を保存</button></div>
   </div>
 
   <div v-if="model.tab === 0">
@@ -184,12 +185,13 @@
       <progress :value="result"></progress>
     </div>
 
-    <div v-else-if="Array.isArray(result.members)">
+    <div v-else-if="Array.isArray(result.members)" class="result">
       <h2>メンバー</h2>
       <div class="flex">
         <label v-for="(member, i) in result.members" :key="member.id" class="panel center width-medium"
           :class="[`color-type${member.type}`, 'checked']">
 
+          <div :class="[i === 0 ? 'leader' : 'hidden']"><b>リーダー</b></div>
           <div>{{member.name}}</div>
           <div>{{rarities[member.rarity]}}&nbsp;{{characters[member.character]}}</div>
           <div>総合力&nbsp;{{member.totalParameter}}</div>
@@ -201,7 +203,6 @@
             同{{["", "バンド", "タイプ"][member.highCondition]}}で
             {{formatNum(100 * member.scoreUpRateHigh, 0)}}%UP
           </div>
-          <b v-if="i === 0">リーダー</b>
         </label>
       </div>
 
@@ -216,7 +217,7 @@
       </div>
 
       <h2>総合力詳細</h2>
-      <table class="result">
+      <table class="result-table">
         <tr><td class="result-detail color-band">バンドパラメータ</td><td>{{result.bandParameter}}</td></tr>
         <tr><td class="result-detail color-item">エリアアイテムボーナス</td><td>{{formatNum(result.itemBonus, 0)}}</td></tr>
         <tr><td class="result-detail color-event">編成ボーナス</td><td>{{formatNum(result.eventBonus, 0)}}</td></tr>
