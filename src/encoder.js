@@ -62,12 +62,34 @@
     if (members.length % 20 > 0) {
       skillLevels.push(...(new Array(20 - members.length % 20)).fill(0));
     }
-    // 20桁の2進数を8桁で記録すると効率が良い
+    // 20桁の5進数を8桁で記録すると効率が良い
     for (let i = 0; i < skillLevels.length; i += 20) {
       code += to62(
         skillLevels.slice(i, i + 20).map(level => level.toString(5)).join(""),
         5,
         8
+      );
+    }
+
+    code += to62(items.length.toString(), 10, 2);
+    const itemAvailables = items.map(item => item.available);
+    if (items.length % 47 > 0) {
+      itemAvailables.push(...(new Array(47 - items.length % 47)).fill(false));
+    }
+    for (let i = 0; i < itemAvailables.length; i += 47) {
+      code += to62(boolsToBin(itemAvailables.slice(i, i + 47)), 2, 8);
+    }
+
+    const itemLevels = items.map(item => parseInt(item.level, 10) - 1);
+    if (items.length % 16 > 0) {
+      itemLevels.push(...(new Array(16 - items.length % 16)).fill(0));
+    }
+    // 16桁の6進数を7桁で記録すると効率が良い
+    for (let i = 0; i < itemLevels.length; i += 16) {
+      code += to62(
+        itemLevels.slice(i, i + 16).map(level => level.toString(6)).join(""),
+        6,
+        7
       );
     }
 
@@ -134,7 +156,8 @@
       });
     }
     skillLevels.splice(memberNum);
-    console.log(skillLevels);
+
+    //TODO: アイテムのデコードの実装（エンコードは実装済み）
 
     return [model, event];
   }

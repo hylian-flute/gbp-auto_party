@@ -133,7 +133,6 @@ addEventListener("load", () => {
       );
     },
     encodeTest: function() {
-      console.dir(this.members.map(member => member.model.skillLevel));
       const code = AutoParty.encode(
         this.model,
         this.members.map(member => member.model),
@@ -142,8 +141,6 @@ addEventListener("load", () => {
       );
       console.dir(code);
       const [model, event] = AutoParty.decode(code);
-      console.dir(model);
-      console.dir(event);
     }
   };
 
