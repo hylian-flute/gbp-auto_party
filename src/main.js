@@ -139,8 +139,14 @@ addEventListener("load", () => {
         this.items.map(item => item.model),
         this.event
       );
-      console.dir(code);
-      const [model, event] = AutoParty.decode(code);
+      console.dir({
+        model: this.model,
+        members: this.members.map(member => member.model),
+        items: this.items.map(item => item.model),
+        evnet: this.event
+      });
+      console.log(code);
+      console.log(AutoParty.decode(code));
     }
   };
 
