@@ -71,6 +71,15 @@ addEventListener("load", () => {
   const methods = {
     onchangeTab: function(e) {
       if (e.target.value !== "3") return;
+      const url = location.href.split("?")[0];
+      const code = AutoParty.encode(
+        this.model,
+        this.members.map(member => member.model),
+        this.items.map(item => item.model),
+        this.event
+      );
+      history.replaceState("", "", `${url}?q=${code}`);
+
       this.result = 0;
       worker.postMessage({
         members: this.members.filter(member => member.model.available),
@@ -254,6 +263,15 @@ addEventListener("load", () => {
         });
       }
       else data.event[key] = event[key];
+    }
+
+    if (data.model.tab === 3) {
+      data.result = 0;
+      worker.postMessage({
+        members: data.members.filter(member => member.model.available),
+        items: data.items.filter(item => item.model.available),
+        event: data.event,
+      });
     }
   }
 
