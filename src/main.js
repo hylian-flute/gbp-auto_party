@@ -38,12 +38,9 @@ addEventListener("load", () => {
     members: [],
     items: [],
     event: {
-      //type: 4,
-      //characters: (new Array(AutoParty.CHARACTER_NUM)).fill(false),
-      //parameter: 3,
-      type: Math.floor(5 * Math.random()),
-      characters: [...new Array(AutoParty.CHARACTER_NUM)].map(_ => Math.random() < 1 / 7),
-      parameter: Math.floor(3 * Math.random()),
+      type: 4,
+      characters: (new Array(AutoParty.CHARACTER_NUM)).fill(false),
+      parameter: 3,
     },
     result: [],
   };

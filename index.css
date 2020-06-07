@@ -16,6 +16,9 @@
 .margin-bottom {
   margin-bottom: 4px;
 }
+input[type="number"] {
+  max-width: 51px;
+}
 
 #app {
   max-width: 1280px;
@@ -150,5 +153,5 @@ h2 {
   margin: 0;
 }
 button {
-  width: 116px;
+  width: 136px;
 }

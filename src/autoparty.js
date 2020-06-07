@@ -46,10 +46,8 @@ const AutoParty = {};
         throw new Error(`Member.constructor: 不正なプロパティ（${name}）`);
       }
       this.model = {
-        //available: false,
-        //skillLevel: "1",
-        available: Math.random() < 0.5,
-        skillLevel: Math.floor(5 * Math.random() + 1).toString(),
+        available: false,
+        skillLevel: "1",
       };
       this.band = Math.floor(character / 5);
       this.totalParameter = parameters.reduce((t, v) => t + v);
@@ -108,10 +106,8 @@ const AutoParty = {};
         throw new Error(`Item.constructor: 不正なプロパティ（${name}）`);
       }
       this.model = {
-        //available: true,
-        //level: "1",
-        available: Math.random() < 0.5,
-        level: Math.floor(paraUpRateArr.length * Math.random() + 1).toString(),
+        available: true,
+        level: "1",
       }
       this.target = (() => {
         if (this.band !== null) return ["band", this.band];
