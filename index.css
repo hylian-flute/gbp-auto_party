@@ -17,6 +17,10 @@
   margin-bottom: 4px;
 }
 
+#app {
+  max-width: 1280px;
+}
+
 .panel.width-xsmall {--width-point: 13}
 .panel.width-small {--width-point: 9.75}
 .panel.width-medium {--width-point: 8;}
