@@ -14,7 +14,7 @@
   <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 </header>
 
-<div id="app">
+<div id="app" hidden>
   <div class="flex">
     <label v-for="(tab, i) in tabs" :key="i" @change="onchangeTab"
       class="panel color-other width-xsmall" :class="{checked: model.tab === i}">

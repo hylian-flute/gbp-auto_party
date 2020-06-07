@@ -53,7 +53,6 @@ addEventListener("load", () => {
     if (typeof message.data === "number") {
       data.result += message.data;
     } else {
-      console.log(message.data);
       data.result = message.data;
       data.result.members = data.result.members.map(
         member => AutoParty.Member.create(member)
@@ -203,7 +202,7 @@ addEventListener("load", () => {
     },
   };
 
-  new Vue({
+  const app = new Vue({
     el: "#app",
     data: data,
     methods: methods,
@@ -233,7 +232,6 @@ addEventListener("load", () => {
     })();
     if (code === undefined) return;
     const [model, members, items, event] = AutoParty.decode(code);
-    console.dir(event);
 
     for (const key in model) {
       if (data.model[key] === undefined) continue;
@@ -280,5 +278,6 @@ addEventListener("load", () => {
       data.members = members;
       data.items = items;
       restoreInputs();
+      app.$el.hidden = false;
     });
 });
