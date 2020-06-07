@@ -124,30 +124,16 @@ addEventListener("load", () => {
       if (kind === "parameter") return this.parameters[value];
       return "全て";
     },
-    encode: function() {
-      return AutoParty.encode(
-        this.model,
-        this.members.map(member => member.model),
-        this.items.map(item => item.model),
-        this.event
-      );
-    },
-    encodeTest: function() {
+    saveInput: function() {
       const code = AutoParty.encode(
         this.model,
         this.members.map(member => member.model),
         this.items.map(item => item.model),
         this.event
       );
-      console.dir({
-        model: this.model,
-        members: this.members.map(member => member.model),
-        items: this.items.map(item => item.model),
-        evnet: this.event
-      });
-      console.log(code);
-      console.log(AutoParty.decode(code));
-    }
+      localStorage.setItem("gbpAutoParty", code);
+      alert("入力状態を保存しました");
+    },
   };
 
   const computed = {
@@ -229,9 +215,52 @@ addEventListener("load", () => {
       .catch(err => alert(err.message));
   }
 
+  const restoreInputs = () => {
+    const code = (() => {
+      const match = location.href.match(/q=([a-zA-Z0-9]+)/);
+      if (match !== null) return match[1];
+      const storage = localStorage["gbpAutoParty"];
+      if (storage !== undefined) return storage;
+    })();
+    if (code === undefined) return;
+    const [model, members, items, event] = AutoParty.decode(code);
+    console.dir(event);
+
+    for (const key in model) {
+      if (data.model[key] === undefined) continue;
+      if (Array.isArray(data.model[key])) {
+        data.model[key] = data.model[key].map((v, i) => {
+          if (model[key][i] !== undefined) return model[key][i];
+          return v;
+        });
+      }
+      else data.model[key] = model[key];
+    }
+
+    data.members.forEach((member, i) => {
+      if (members[i] !== undefined) member.model = members[i];
+    });
+
+    data.items.forEach((item, i) => {
+      if (items[i] !== undefined) item.model = items[i];
+    });
+
+    for (const key in event) {
+      if (data.event[key] === undefined) continue;
+      if (Array.isArray(data.event[key])) {
+        data.event[key] = data.event[key].map((v, i) => {
+          if (event[key][i] !== undefined) return event[key][i];
+          return v;
+        });
+      }
+      else data.event[key] = event[key];
+    }
+  }
+
   Promise.all([fetchMembers(), fetchItems()])
     .then(([members, items]) => {
       data.members = members;
       data.items = items;
+      restoreInputs();
     });
 });

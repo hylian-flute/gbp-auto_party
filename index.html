@@ -22,10 +22,10 @@
       <input type="radio" v-model="model.tab" name="tab" :value="i">
       <span>{{tab}}</span>
     </label>
-    <div><button @click="encodeTest">入力状態を保存</button></div>
+    <div><button @click="saveInput">入力状態を保存</button></div>
   </div>
 
-  <div v-if="model.tab === 0">
+  <div v-show="model.tab === 0">
     <div class="filter-menu">
       <h2>メンバー並び替え</h2>
 
@@ -121,7 +121,7 @@
 
   </div>
 
-  <div v-else-if="model.tab === 1">
+  <div v-show="model.tab === 1">
     <div class="margin-bottom">
       <b>アイテム一括操作</b>
       <button @click="allItemAvailable(true)">所持</button>
@@ -147,7 +147,7 @@
     </div>
   </div>
 
-  <div v-else-if="model.tab === 2">
+  <div v-show="model.tab === 2">
     <h2>タイプボーナス</h2>
     <div class="flex">
       <label v-for="(type, i) in eventTypes" :key="i" class="panel width-xsmall"
@@ -180,7 +180,7 @@
     </div>
   </div>
 
-  <div v-else>
+  <div v-show="model.tab === 3">
     <div v-if="typeof result === 'number'">
       <span>計算中...</span>
       <progress :value="result"></progress>

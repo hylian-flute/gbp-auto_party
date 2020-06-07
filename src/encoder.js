@@ -1,6 +1,84 @@
 "use strict";
 
 {
+  const decode01 = function(code){
+    const toBinCode = str => {
+      let binCode = "";
+      for(let i = 0; i < str.length; ++i){
+        let bin = parseInt(str[i], 32).toString(2);
+        for(let j = bin.length; j < 5; ++j) bin = "0" + bin;
+        binCode += bin;
+      }
+      return binCode;
+    };
+    const readBoolArr = (binCode, p, len) => {
+      const arr = [];
+      for(let i = 0; i < len; ++i){
+        arr.push(binCode[p++] == "1" ? true : false);
+      }
+      return arr;
+    };
+    const readLevelArr = (binCode, max) => {
+      binCode = binCode.slice(binCode.indexOf("0") + 1);
+      let blockNum = 1;
+      if(max == 5) blockNum = 3;
+      else if(max == 6) blockNum = 5;
+      const digit = Math.ceil(Math.log2(max**blockNum));
+      const arr = [];
+      for(let i = 0; i < binCode.length; i += digit){
+        let num = parseInt(binCode.slice(i, i + digit), 2);
+        for(let j = 0; j < blockNum; ++j){
+          arr.push((num%max + 1).toString(10));
+          num = Math.floor(num/max);
+        }
+      }
+      return arr;
+    };
+    const map = new Map();
+    const version = parseInt(code.slice(0, 2), 32);
+    let binCodeArr = code.slice(2).split("w").map(toBinCode);
+    let p = binCodeArr[0].indexOf("0") + 1;
+    map.set("tabOption", parseInt(binCodeArr[0].slice(p, p + 2), 2));
+    p += 2;
+    map.set("typeRefineArr", readBoolArr(binCodeArr[0], p, 4));
+    p += 4;
+    if (version === 0) {
+      map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 5));
+      p += 5;
+    } else {
+      map.set("bandRefineArr", readBoolArr(binCodeArr[0], p, 6));
+      p += 6;
+    }
+    map.set("skillRefineArr", readBoolArr(binCodeArr[0], p, 3));
+    p += 3;
+    map.set("rarityRefineArr", readBoolArr(binCodeArr[0], p, 4));
+    p += 4;
+    map.set("sortOption", parseInt(binCodeArr[0].slice(p, p + 2), 2));
+    p += 2;
+    map.set("eventType", parseInt(binCodeArr[0].slice(p, p + 3), 2));
+    p += 3;
+    if (version === 0) {
+      map.set("eventCharacterArr", readBoolArr(binCodeArr[0], p, 25));
+      p += 25;
+    } else {
+      map.set("eventCharacterArr", readBoolArr(binCodeArr[0], p, 30));
+      p += 30;
+    }
+    map.set("eventPara", parseInt(binCodeArr[0].slice(p, p + 2), 2));
+
+    const memberLength = parseInt(binCodeArr[1], 2);
+    map.set("memberAvailableArr",
+      readBoolArr(binCodeArr[2], binCodeArr[2].indexOf("0") + 1, memberLength));
+    map.set("memberLevelArr",
+      readLevelArr(binCodeArr[3], 5).slice(0, memberLength));
+    const itemLength = parseInt(binCodeArr[4], 2);
+    map.set("itemAvailableArr",
+      readBoolArr(binCodeArr[5], binCodeArr[5].indexOf("0") + 1, itemLength));
+    map.set("itemLevelArr",
+      readLevelArr(binCodeArr[6], 6).slice(0, itemLength));
+    return map;
+  };
+
   const chars62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const charsMap = new Map(
     chars62.split("").map((char, idx) => [char, idx])
@@ -104,7 +182,7 @@
   }
 
   const decode02 = code => {
-    let p = 0;
+    let p = 2;
     const slice = (n, callback) => {
       const result = callback(code.slice(p, p + n));
       p += n;
@@ -116,7 +194,7 @@
 
     const radiosLen = slice(1, bigNumFrom62).toNumber();
     const radios = slice(radiosLen, generateArrFrom62(5, false, 4));
-    [model.tab, model.sort, event.type, event.parameter] = radios;
+    [model.tab, model.sort, event.type, event.parameter] = radios.map(s => parseInt(s, 5));
 
     const checksLen = slice(1, bigNumFrom62).toNumber();
     const checks = slice(
@@ -175,175 +253,39 @@
   };
 
   AutoParty.decode = code => {
-    if (code.slice(0, 2) === "02") return decode02(code.slice(2));
+    const version = parseInt(code.slice(0, 2), 32);
+    if (version <= 1) {
+      const map = decode01(code);
+      return [
+        {
+          tab: map.get("tabOption"),
+          filterTypes: map.get("typeRefineArr"),
+          filterBands: map.get("bandRefineArr"),
+          filterSkills: map.get("skillRefineArr"),
+          filterRarities: map.get("rarityRefineArr"),
+          sort: map.get("sortOption"),
+        },
+        [...new Array(Math.min(
+          map.get("memberAvailableArr").length,
+          map.get("memberLevelArr").length
+        ))].map((_, i) => ({
+          available: map.get("memberAvailableArr")[i],
+          skillLevel: map.get("memberLevelArr")[i],
+        })),
+        [...new Array(Math.min(
+          map.get("itemAvailableArr").length,
+          map.get("itemLevelArr").length
+        ))].map((_, i) => ({
+          available: map.get("itemAvailableArr")[i],
+          level: map.get("itemLevelArr")[i],
+        })),
+        {
+          type: map.get("eventType"),
+          characters: map.get("eventCharacterArr"),
+          parameter: map.get("eventPara") < 3 ? map.get("eventPara") : 0,
+        }
+      ];
+    }
+    if (version === 2) return decode02(code);
   };
 }
-
-/*
-{
-  const chars62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const to62 = (str, radix, digit) => {
-    let n = parseInt(str, radix);
-    const result = [];
-    while (n > 0) {
-      result.push(chars62[n % 62]);
-      n = Math.floor(n / 62);
-    }
-    return `${"0".repeat(digit)}${result.reverse().join("")}`.slice(-digit);
-  }
-
-  const from62 = (str, radix, digit) => {
-    const charToNum = new Map();
-    for (let i = 0; i < 62; ++i) charToNum.set(chars62[i], i);
-
-    let n = 0;
-    for (let i = 0; i < str.length; ++i) {
-      n = 62 * n + charToNum.get(str[i]);
-    }
-    return `${"0".repeat(digit)}${n.toString(radix)}`.slice(-digit);
-  }
-
-  AutoParty.encode = function(model, members, items, event) {
-    const boolsToBin = arr => arr.map(v => v ? "1" : "0").join("");
-    let code = "02";
-
-    // 4桁の5進数は2桁の62進数に変換できる
-    code += to62(`${model.tab}${model.sort}${event.type}${event.parameter}`, 5, 2);
-
-    // 18桁の2進数は4桁の62進数に変換できる
-    code += to62(
-      boolsToBin([
-        ...model.filterTypes,
-        ...model.filterBands,
-        ...model.filterSkills,
-        ...model.filterRarities,
-      ]),
-      2,
-      4
-    );
-
-    // 35桁の2進数は6桁の62進数に変換できる
-    code += to62(boolsToBin(event.characters), 2, 6);
-
-    // メンバー数を2桁で記録する（最大3844）
-    code += to62(members.length.toString(), 10, 2);
-    const memberAvailables = members.map(member => member.available);
-    // メンバー数を47の倍数で揃える
-    if (members.length % 47 > 0) {
-      memberAvailables.push(...(new Array(47 - members.length % 47)).fill(false));
-    }
-    // 47桁の2進数を8桁で記録すると効率が良い
-    for (let i = 0; i < memberAvailables.length; i += 47) {
-      code += to62(boolsToBin(memberAvailables.slice(i, i + 47)), 2, 8);
-    }
-
-    const skillLevels = members.map(member => parseInt(member.skillLevel, 10) - 1);
-    // メンバー数を20の倍数で揃える
-    if (members.length % 20 > 0) {
-      skillLevels.push(...(new Array(20 - members.length % 20)).fill(0));
-    }
-    // 20桁の5進数を8桁で記録すると効率が良い
-    for (let i = 0; i < skillLevels.length; i += 20) {
-      code += to62(
-        skillLevels.slice(i, i + 20).map(level => level.toString(5)).join(""),
-        5,
-        8
-      );
-    }
-
-    code += to62(items.length.toString(), 10, 2);
-    const itemAvailables = items.map(item => item.available);
-    if (items.length % 47 > 0) {
-      itemAvailables.push(...(new Array(47 - items.length % 47)).fill(false));
-    }
-    for (let i = 0; i < itemAvailables.length; i += 47) {
-      code += to62(boolsToBin(itemAvailables.slice(i, i + 47)), 2, 8);
-    }
-
-    const itemLevels = items.map(item => parseInt(item.level, 10) - 1);
-    if (items.length % 16 > 0) {
-      itemLevels.push(...(new Array(16 - items.length % 16)).fill(0));
-    }
-    // 16桁の6進数を7桁で記録すると効率が良い
-    for (let i = 0; i < itemLevels.length; i += 16) {
-      code += to62(
-        itemLevels.slice(i, i + 16).map(level => level.toString(6)).join(""),
-        6,
-        7
-      );
-    }
-
-    return code;
-  };
-
-  const decode02 = code => {
-    let p = 0;
-
-    const slice = (n, callback) => {
-      const result = callback(code.slice(p, p + n));
-      p += n;
-      return result;
-    }
-
-    const binToBools = bin => {
-      return bin.split("").map(v => v === "1");
-    }
-
-    const model = {};
-    const event = {};
-
-    slice(2, part => {
-      const radio = from62(part, 5, 4);
-      [model.tab, model.sort, event.type, event.parameter] = radio.split("");
-    });
-
-    slice(4, part => {
-      const bin = from62(part, 2, 18);
-      [
-        model.filterTypes,
-        model.filterBands,
-        model.filterSkills,
-        model.filterRarities
-      ] = [
-        bin.slice(0, 4),
-        bin.slice(4, 11),
-        bin.slice(11, 14),
-        bin.slice(14, 18),
-      ].map(binToBools);
-    });
-
-    slice(6, part => {
-      event.characters = binToBools(from62(part, 2, 35));
-    });
-
-    const memberNum = slice(2, part => parseInt(from62(part, 10, 4), 10));
-    const memberAvailables = [];
-    for (let i = 0; i < Math.ceil(memberNum / 47); ++i) {
-      slice(8, part => {
-        memberAvailables.push(...binToBools(from62(part, 2, 47)));
-      });
-    }
-    memberAvailables.splice(memberNum);
-
-    const skillLevels = [];
-    for (let i = 0; i < Math.ceil(memberNum / 20); ++i) {
-      slice(8, part => {
-        skillLevels.push(
-          ...from62(part, 5, 20)
-            .split("")
-            .map(level => (parseInt(level, 5) + 1).toString())
-        );
-      });
-    }
-    skillLevels.splice(memberNum);
-
-    //TODO: アイテムのデコードの実装（エンコードは実装済み）
-
-    return [model, event];
-  }
-
-  AutoParty.decode = function(code) {
-    if (code.slice(0, 2) === "02") return decode02(code.slice(2));
-  };
-}
-*/
