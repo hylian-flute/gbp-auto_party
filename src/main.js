@@ -40,7 +40,7 @@ addEventListener("load", () => {
     event: {
       type: 4,
       characters: (new Array(AutoParty.CHARACTER_NUM)).fill(false),
-      parameter: 3,
+      parameter: 0,
     },
     result: [],
   };
