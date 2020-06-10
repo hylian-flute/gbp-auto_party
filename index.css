@@ -67,6 +67,10 @@ input[type="number"] {
   background-color: #bcedff;
   border-color: #27b6ea;
 }
+.panel.color-band6 {
+  background-color: #bcfdff;
+  border-color: #27e4ea;
+}
 .panel.color-type0 {
   background-color: #ffbcc9;
   border-color: #ff345a;
