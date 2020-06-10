@@ -51,6 +51,7 @@ addEventListener("load", () => {
       data.result += message.data;
     } else {
       data.result = message.data;
+      if (data.result.members === undefined) return;
       data.result.members = data.result.members.map(
         member => AutoParty.Member.create(member)
       );
