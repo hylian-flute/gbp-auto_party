@@ -3,11 +3,14 @@ import json
 from ftplib import FTP
 import getpass
 
-CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQRCRL35m00_cyQM9ulKfItHfOy2dBquQlOLDjpMbbqH4CfqtDNXz0S1YLYhccTK4b_8C-XOHxQcGfG/pub?gid=478276553&single=true&output=csv'
+# CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQRCRL35m00_cyQM9ulKfItHfOy2dBquQlOLDjpMbbqH4CfqtDNXz0S1YLYhccTK4b_8C-XOHxQcGfG/pub?gid=478276553&single=true&output=csv'
 
 str_data = None
-with urllib.request.urlopen(CSV_URL) as f:
-  str_data = f.read().decode('utf-8')
+# with urllib.request.urlopen(CSV_URL) as f:
+#   str_data = f.read().decode('utf-8')
+
+with open('./data/members.csv') as f:
+  str_data = f.read()
 
 data_matrix = [row.split(',') for row in str_data.split('\n')]
 score_up_time_arr_dict = {
