@@ -1,0 +1,1 @@
+docker run -it --rm -v "$(pwd):/home/app" -w /home/app python:3-alpine python ./update-members.py
