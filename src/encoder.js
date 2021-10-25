@@ -105,7 +105,7 @@
     ("0".repeat(len) + to62(new BigNumber(num))).slice(-len);
 
   AutoParty.encode = function(model, members, items, event) {
-    let code = "02";
+    let code = "03";
 
     const radios = arrTo62([model.tab, model.sort, event.type, event.parameter], 5);
     const radiosLen = numToFixedLen62(radios.length, 1);
@@ -145,7 +145,7 @@
 
     const itemLevels = arrTo62(
       ["2", ...items.map(items => items.level)],
-      6,
+      7,
       true
     );
     const itemLevelsLen = numToFixedLen62(itemLevels.length, 1);
@@ -252,6 +252,77 @@
     return [model, members, items, event];
   };
 
+  const decode03 = code => {
+    let p = 2;
+    const slice = (n, callback) => {
+      const result = callback(code.slice(p, p + n));
+      p += n;
+      return result;
+    };
+
+    const model = {};
+    const event = {};
+
+    const radiosLen = slice(1, bigNumFrom62).toNumber();
+    const radios = slice(radiosLen, generateArrFrom62(5, false, 4));
+    [model.tab, model.sort, event.type, event.parameter] = radios.map(s => parseInt(s, 5));
+
+    const checksLen = slice(1, bigNumFrom62).toNumber();
+    const checks = slice(
+      checksLen,
+      generateArrFrom62(true, false, 4 + 7 + 3 + 4 + 35)
+    );
+    [
+      model.filterTypes,
+      model.filterBands,
+      model.filterSkills,
+      model.filterRarities,
+      event.characters
+    ] = [
+      checks.slice(0, 4),
+      checks.slice(4, 11),
+      checks.slice(11, 14),
+      checks.slice(14, 18),
+      checks.slice(18, 53),
+    ];
+
+    const memberAvailablesLen = slice(2, bigNumFrom62).toNumber();
+    const memberAvailables =
+      slice(memberAvailablesLen, generateArrFrom62(true)).slice(1);
+
+    const skillLevelsLen = slice(2, bigNumFrom62).toNumber();
+    const skillLevels =
+      slice(skillLevelsLen, generateArrFrom62(5, true)).slice(1);
+    
+    if (memberAvailables.length !== skillLevels.length) {
+      throw new Error("decode (members legnth): デコード失敗");
+    }
+
+    const members = [...new Array(memberAvailables.length)].map((_, i) => ({
+      available: memberAvailables[i],
+      skillLevel: skillLevels[i],
+    }));
+
+    const itemAvailablesLen = slice(1, bigNumFrom62).toNumber();
+    const itemAvailables =
+      slice(itemAvailablesLen, generateArrFrom62(true)).slice(1);
+
+    const itemLevelsLen = slice(1, bigNumFrom62).toNumber();
+    const itemLevels =
+      slice(itemLevelsLen, generateArrFrom62(7, true)).slice(1);
+    
+    if (itemAvailables.length !== itemLevels.length) {
+      throw new Error("decode (members legnth): デコード失敗");
+    }
+
+    const items = [...new Array(itemAvailables.length)].map((_, i) => ({
+      available: itemAvailables[i],
+      level: itemLevels[i],
+    }));
+
+    return [model, members, items, event];
+  };
+
   AutoParty.decode = code => {
     const version = parseInt(code.slice(0, 2), 32);
     if (version <= 1) {
@@ -287,5 +358,6 @@
       ];
     }
     if (version === 2) return decode02(code);
+    if (version === 3) return decode03(code);
   };
 }

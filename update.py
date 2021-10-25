@@ -4,12 +4,12 @@ import getpass
 with FTP('users602.lolipop.jp') as ftp:
   ftp.login('main.jp-charines', getpass.getpass('FTP Password: '))
   file_list = [
-    'index.html',
+    #'index.html',
     #'help.html',
     #'favicon.png',
-    #'scripts/script.js',
+    'src/encoder.js',
     #'style/style.css',
-    #'data/items.json',
+    'data/items.json',
     #'data/members.json'
   ]
   for path in file_list:
